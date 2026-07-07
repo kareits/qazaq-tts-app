@@ -1,0 +1,49 @@
+:root {
+  /* Тёмная тема «Кешкі дала» (вечерняя степь) — палитра флага Казахстана. */
+  --bg: #0b1220;
+  --panel: #131d33;
+  --panel-2: #0f1830;
+  --border: #26344f;
+  --border-soft: #1c2740;
+  --text: #dce5f2;
+  --muted: #8b98b4;
+
+  --sky: #2cc6de; /* небесно-голубой (для тёмного фона поярче) */
+  --sky-deep: #00afca; /* базовый голубой флага */
+  --gold: #fec50c; /* золото солнца флага */
+  --sky-soft: rgba(44, 198, 222, 0.14);
+  --gold-soft: rgba(254, 197, 12, 0.16);
+
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  /* Мягкое свечение неба у верхней кромки — «вечерняя степь». */
+  background:
+    radial-gradient(1100px 620px at 50% -12%, #16233f 0%, #0b1220 58%, #070c16 100%)
+    fixed;
+  color: var(--text);
+}
+
+/* Тонкая акцентная линия флага (голубой → золото) вверху страницы. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--sky-deep), var(--sky), var(--gold));
+  z-index: 20;
+}
+
+#root {
+  min-height: 100vh;
+}

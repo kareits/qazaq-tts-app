@@ -1,0 +1,314 @@
+.app {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 32px 20px 72px;
+}
+
+/* --- Шапка --- */
+.app-header {
+  margin-bottom: 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin: 0;
+  background: linear-gradient(90deg, var(--sky), var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.2px;
+}
+
+.ornament {
+  display: block;
+  margin-top: 14px;
+  opacity: 0.5;
+}
+
+/* --- Статус --- */
+.status {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 22px;
+  padding: 7px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  display: inline-block;
+}
+
+/* --- Поля --- */
+.field {
+  display: block;
+  margin-bottom: 18px;
+}
+
+.field-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+}
+
+select,
+textarea {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 100%;
+  background: var(--panel);
+  color: var(--text);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--sky);
+  box-shadow: 0 0 0 3px var(--sky-soft);
+}
+
+select {
+  width: auto;
+  min-width: 170px;
+  cursor: pointer;
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.text-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.hint {
+  color: var(--gold);
+  opacity: 0.85;
+}
+
+/* --- Предупреждение / ошибка --- */
+.warning {
+  background: var(--gold-soft);
+  border: 1px solid rgba(254, 197, 12, 0.4);
+  color: #f5d67a;
+  padding: 9px 13px;
+  border-radius: 9px;
+  font-size: 13.5px;
+  margin-bottom: 16px;
+}
+
+.error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: #fca5a5;
+  padding: 9px 13px;
+  border-radius: 9px;
+  font-size: 13.5px;
+  margin-bottom: 16px;
+}
+
+/* --- Предложения --- */
+.selection-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.sentence-view {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  line-height: 2.1;
+  margin-bottom: 22px;
+  background:
+    linear-gradient(180deg, var(--panel), var(--panel-2));
+}
+
+.sentence {
+  cursor: pointer;
+  padding: 3px 5px;
+  border-radius: 6px;
+  transition:
+    background 0.14s,
+    color 0.14s,
+    box-shadow 0.14s;
+}
+
+.sentence:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sentence.selected {
+  background: var(--sky-soft);
+  box-shadow: inset 0 0 0 1px rgba(44, 198, 222, 0.55);
+}
+
+.sentence.playing {
+  background: var(--gold-soft);
+  color: #ffe9a8;
+  font-weight: 600;
+  /* Мягкое золотое свечение текущего предложения. */
+  box-shadow:
+    inset 0 0 0 1px rgba(254, 197, 12, 0.6),
+    0 0 14px rgba(254, 197, 12, 0.35);
+}
+
+/* --- Кнопки --- */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+button {
+  font: inherit;
+  padding: 9px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    background 0.14s,
+    border-color 0.14s,
+    transform 0.05s;
+}
+
+button:hover:not(:disabled) {
+  background: var(--panel-2);
+  border-color: var(--sky);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.synth {
+  background: linear-gradient(90deg, var(--sky-deep), var(--sky));
+  color: #05222b;
+  border: none;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  box-shadow: 0 4px 14px rgba(0, 175, 202, 0.3);
+}
+
+button.synth:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.cached {
+  font-size: 12px;
+  color: var(--gold);
+  background: var(--gold-soft);
+  border: 1px solid rgba(254, 197, 12, 0.35);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* --- Прогресс синтеза --- */
+.synth-progress {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+}
+
+.synth-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.synth-percent {
+  font-weight: 700;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Плеер --- */
+.player {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+}
+
+.player-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.player-time {
+  font-size: 13px;
+  color: var(--muted);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress {
+  height: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--sky-deep), var(--sky));
+  border-radius: 999px;
+  transition: width 0.1s linear;
+}
+
+.download {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--sky);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.download:hover {
+  color: var(--gold);
+}

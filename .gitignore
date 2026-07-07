@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Backend: модели и рабочие файлы (не коммитить веса и временные/кэш-файлы)
+backend/models/
+backend/storage/cache/
+backend/storage/tmp/
+
+# Frontend
+node_modules/
+dist/
+
+# Прочее
+.env
