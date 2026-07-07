@@ -17,7 +17,7 @@ services:
       MODELS_DIR: /models
       STORAGE_DIR: /storage
       CORS_ORIGINS: "" # single domain → CORS not needed
-      DEFAULT_VOICE: ${DEFAULT_VOICE:-female1}
+      DEFAULT_VOICE: ${DEFAULT_VOICE:-female3}
     volumes:
       - models:/models
       - storage:/storage

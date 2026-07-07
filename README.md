@@ -80,7 +80,7 @@ The weights are not stored in the repository. `backend/scripts/download_kazakhtt
 downloads them from the ISSAI servers (repository
 [IS2AI/Kazakh_TTS](https://github.com/IS2AI/Kazakh_TTS)) and lays them out in
 `backend/models/kazakhtts2/<voice>/`. Voices: `female1`, `female2`, `female3`,
-`male1`, `male2` (default `female1`).
+`male1`, `male2` (default `female3` — it sounds cleaner than `female1`).
 
 > KazakhTTS2 license — **CC-BY-4.0** (commercial use allowed with attribution).
 > Attribution requirements and details — in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

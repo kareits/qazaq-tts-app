@@ -44,7 +44,7 @@ The script downloads from the ISSAI servers and lays them out in
   vocoder/config.yml
 ```
 
-Voices: `female1`, `female2`, `female3`, `male1`, `male2` (default `female1`).
+Voices: `female1`, `female2`, `female3`, `male1`, `male2` (default `female3`).
 Source: the IS2AI/Kazakh_TTS repository, files at
 `issai.nu.edu.kz/wp-content/uploads/2022/03/` (`kaztts_<voice>_tacotron2_*.zip`
 and `parallelwavegan_<voice>_checkpoint.zip`).

@@ -61,7 +61,7 @@ class TTSRequest(BaseModel):
     """Request of /api/tts."""
 
     text: str
-    voice: str = "female1"
+    voice: str = "female3"
     # In the MVP the format is always mp3; the parameter is kept for future use.
     format: str = "mp3"
     engine: str = "kazakhtts2"

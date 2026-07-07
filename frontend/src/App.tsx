@@ -28,7 +28,7 @@ function App() {
 
   const [health, setHealth] = useState<Health | null>(null)
   const [voices, setVoices] = useState<Voice[]>([])
-  const [voice, setVoice] = useState('female1')
+  const [voice, setVoice] = useState('female3')
 
   const [text, setText] = useState(
     'Сәлеметсіз бе! Бұл қазақ тілінде сөйлеу синтезінің мысалы. Тағы бір сөйлем.',

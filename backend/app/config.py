@@ -71,7 +71,7 @@ CACHE_MAX_BYTES = _env_int("CACHE_MAX_BYTES", 500 * 1024 * 1024)  # 500 MB
 TTS_DEVICE = os.getenv("TTS_DEVICE", "cpu")
 
 # Default voice (preloaded at startup).
-DEFAULT_VOICE = os.getenv("DEFAULT_VOICE", "female1")
+DEFAULT_VOICE = os.getenv("DEFAULT_VOICE", "female3")
 
 # CORS origins. Default — the Vite dev server. In production behind a single
 # domain (frontend and API on one origin) CORS is not needed — set CORS_ORIGINS="".
