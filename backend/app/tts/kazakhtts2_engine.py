@@ -41,7 +41,7 @@ from app.tts.base import BaseTTSEngine
 
 logger = logging.getLogger(__name__)
 
-# Голос по умолчанию (грузится при старте приложения).
+# Голос по умолчанию (грузится при старте приложения), если не задан явно.
 DEFAULT_VOICE = "female1"
 
 # Частота дискретизации моделей KazakhTTS2.
@@ -49,11 +49,18 @@ SAMPLE_RATE = 22050
 
 
 class KazakhTTS2Engine(BaseTTSEngine):
-    """TTS-движок KazakhTTS2 на CPU."""
+    """TTS-движок KazakhTTS2 (по умолчанию CPU)."""
 
-    def __init__(self, models_dir: Path) -> None:
+    def __init__(
+        self,
+        models_dir: Path,
+        device: str = "cpu",
+        default_voice: str = DEFAULT_VOICE,
+    ) -> None:
         # Корень с голосами: models/kazakhtts2/
         self._root = Path(models_dir) / "kazakhtts2"
+        self._device = device
+        self._default_voice = default_voice
         self._fs = SAMPLE_RATE
         # Кэш загруженных моделей: voice -> (text2speech, vocoder)
         self._models: dict[str, tuple] = {}
@@ -76,7 +83,11 @@ class KazakhTTS2Engine(BaseTTSEngine):
 
         # Предзагружаем дефолтный голос (или первый доступный), чтобы модель
         # грузилась один раз при старте, а не на первый запрос.
-        default = DEFAULT_VOICE if DEFAULT_VOICE in self._voices else self._voices[0]
+        default = (
+            self._default_voice
+            if self._default_voice in self._voices
+            else self._voices[0]
+        )
         self._get_model(default)
         logger.info(
             "KazakhTTS2 загружен. Голоса: %s. Предзагружен: %s",
@@ -175,7 +186,7 @@ class KazakhTTS2Engine(BaseTTSEngine):
         text2speech = Text2Speech(
             train_config=str(runtime_config),
             model_file=str(pth),
-            device="cpu",
+            device=self._device,
             # Параметры декодирования Tacotron2 (как в оригинальном synthesize.py).
             threshold=0.5,
             minlenratio=0.0,
@@ -184,7 +195,7 @@ class KazakhTTS2Engine(BaseTTSEngine):
             backward_window=1,
             forward_window=3,
         )
-        vocoder = load_vocoder(str(pkl)).to("cpu").eval()
+        vocoder = load_vocoder(str(pkl)).to(self._device).eval()
         vocoder.remove_weight_norm()
         return text2speech, vocoder
 

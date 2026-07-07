@@ -20,13 +20,15 @@ import uuid
 from app.config import (
     AUDIO_TARGET_PEAK,
     CACHE_DIR,
+    DEFAULT_VOICE,
     MAX_TEXT_LENGTH,
     MODELS_DIR,
     SEGMENT_SILENCE_SEC,
     TMP_DIR,
+    TTS_DEVICE,
 )
 from app.services import audio_service, cache_service, text_normalizer
-from app.tts.kazakhtts2_engine import DEFAULT_VOICE, KazakhTTS2Engine
+from app.tts.kazakhtts2_engine import KazakhTTS2Engine
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +42,9 @@ _semaphore = asyncio.Semaphore(1)
 def init_engine() -> None:
     """Загрузить TTS-движок. Вызывается один раз при старте (lifespan)."""
     global _engine
-    engine = KazakhTTS2Engine(MODELS_DIR)
+    engine = KazakhTTS2Engine(
+        MODELS_DIR, device=TTS_DEVICE, default_voice=DEFAULT_VOICE
+    )
     engine.load()
     _engine = engine
 

@@ -1,6 +1,11 @@
-// Клиент backend API. Все запросы идут на локальный backend.
-
-export const BACKEND_URL = 'http://127.0.0.1:8000'
+// Клиент backend API.
+//
+// Базовый URL берётся из VITE_BACKEND_URL (задаётся при сборке):
+//  - локальная разработка: http://127.0.0.1:8000 (дефолт ниже);
+//  - прод за одним доменом: VITE_BACKEND_URL="" → относительные пути (/api/...),
+//    которые reverse-proxy направляет на backend.
+export const BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL ?? 'http://127.0.0.1:8000'
 
 export interface Health {
   status: string

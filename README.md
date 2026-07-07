@@ -81,6 +81,31 @@ Backend проверяет наличие ffmpeg при старте и пише
 и раскладывает в `backend/models/kazakhtts2/<voice>/`. Голоса: `female1`, `female2`,
 `female3`, `male1`, `male2` (по умолчанию `female1`).
 
+> Лицензия KazakhTTS2 — **CC-BY-4.0** (коммерческое использование разрешено при
+> атрибуции). Требования по атрибуции и деталям — в [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+## Развёртывание на сервере (Docker)
+
+Прод-схема: **один домен** — Caddy раздаёт статику фронтенда и проксирует `/api`
+на backend (авто-HTTPS), поэтому CORS не нужен. Файлы: `docker-compose.yml`,
+`backend/Dockerfile`, `frontend/Dockerfile` + `frontend/Caddyfile`.
+
+```bash
+cp .env.example .env          # задать SITE_ADDRESS (домен для HTTPS)
+docker compose build
+docker compose run --rm backend python scripts/download_kazakhtts2.py  # модели в volume (~600 МБ, один раз)
+docker compose up -d
+```
+
+Локально откроется на `http://localhost`. Для прода укажи домен в `.env`
+(`SITE_ADDRESS=tts.example.kz`) — Caddy сам выпустит TLS-сертификат.
+
+Настройка через переменные окружения backend: `CORS_ORIGINS` (пусто при одном
+домене), `MAX_TEXT_LENGTH`, `CACHE_MAX_BYTES`, `DEFAULT_VOICE`, `MODELS_DIR`,
+`STORAGE_DIR`, `TTS_DEVICE`. Frontend: `VITE_BACKEND_URL` (пусто → относительные
+пути). Полный план (VPS-провижининг, rate-limit, масштабирование, мобильное
+приложение) — в [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 ## Архитектура (ключевые правила)
 
 - **Только CPU**: torch стоит CPU-сборкой; движок явно использует `device="cpu"`.

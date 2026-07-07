@@ -1,0 +1,44 @@
+# Прод-развёртывание в одном домене: web (Caddy) раздаёт статику фронтенда и
+# проксирует /api на backend. CORS не нужен (один origin).
+#
+# Первый запуск:
+#   1) docker compose build
+#   2) docker compose run --rm backend python scripts/download_kazakhtts2.py
+#      (качает модели в volume `models`, ~600 МБ)
+#   3) docker compose up -d
+#
+# Локально открыть http://localhost. Для прода задать SITE_ADDRESS=<домен> в .env
+# (Caddy сам получит HTTPS).
+
+services:
+  backend:
+    build: ./backend
+    environment:
+      MODELS_DIR: /models
+      STORAGE_DIR: /storage
+      CORS_ORIGINS: "" # один домен → CORS не нужен
+      DEFAULT_VOICE: ${DEFAULT_VOICE:-female1}
+    volumes:
+      - models:/models
+      - storage:/storage
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_BACKEND_URL: "" # относительные пути → проксируются на backend
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  models:
+  storage:
