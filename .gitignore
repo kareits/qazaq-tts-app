@@ -3,7 +3,7 @@
 __pycache__/
 *.pyc
 
-# Backend: модели и рабочие файлы (не коммитить веса и временные/кэш-файлы)
+# Backend: models and working files (do not commit weights or temp/cache files)
 backend/models/
 backend/storage/cache/
 backend/storage/tmp/
@@ -12,5 +12,5 @@ backend/storage/tmp/
 node_modules/
 dist/
 
-# Прочее
+# Other
 .env

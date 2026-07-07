@@ -1,161 +1,165 @@
-# Kazakh TTS App — план разработки (актуальная версия)
+# Kazakh TTS App — development plan (current version)
 
 ## Context
 
-Локальное веб-приложение для синтеза казахской речи (кириллица) по ТЗ
-`Kazakh_TTS_App_Specification.md`. Работает полностью локально, на CPU, без
-облачных API.
+Local web application for synthesizing Kazakh speech (Cyrillic) per the spec
+`Kazakh_TTS_App_Specification.md`. Runs fully locally, on CPU, without cloud APIs.
 
-**Важное решение команды:** fallback-модель MMS (`facebook/mms-tts-kaz`)
-исключена из проекта. Используется ТОЛЬКО KazakhTTS2. Соответственно Этап 3
-из исходного ТЗ пропускается, а KazakhTTS2 становится основным и единственным
-движком.
+**Important team decision:** the MMS fallback model (`facebook/mms-tts-kaz`) is
+excluded from the project. ONLY KazakhTTS2 is used. Accordingly, Stage 3 from the
+original spec is skipped, and KazakhTTS2 becomes the main and only engine.
 
-Стек: Python 3.10–3.11, FastAPI + Uvicorn, PyTorch (CPU), ESPnet2 (KazakhTTS2),
-soundfile/numpy, ffmpeg (subprocess, не pydub), React + Vite + TypeScript.
+Stack: Python 3.10–3.11, FastAPI + Uvicorn, PyTorch (CPU), ESPnet2 (KazakhTTS2),
+soundfile/numpy, ffmpeg (subprocess, not pydub), React + Vite + TypeScript.
 
-## Статус этапов
+## Stage status
 
-### ✅ Этап 1. Каркас — ГОТОВО
-- Backend FastAPI + `/api/health`, CORS, config, requirements с pin-версиями.
-- Frontend React + Vite + TS, проверка связи frontend → backend.
+### ✅ Stage 1. Skeleton — DONE
+- FastAPI backend + `/api/health`, CORS, config, requirements with pinned versions.
+- React + Vite + TS frontend, frontend → backend connectivity check.
 - git init, .gitignore, CLAUDE.md.
 
-### ✅ Этап 2. Audio pipeline без модели — ГОТОВО
-- `audio_service.py`: проверка ffmpeg, wav → mp3, замер длительности.
+### ✅ Stage 2. Audio pipeline without a model — DONE
+- `audio_service.py`: ffmpeg check, wav → mp3, duration measurement.
 - `GET /api/audio/{filename}` (FileResponse, Content-Disposition: attachment).
-- Временный `POST /api/dev/test-audio` (тестовый тон, будет удалён на Этапе 4/5).
-- Проверка ffmpeg при старте (lifespan).
-- Frontend: генерация тестового аудио, прослушивание, скачивание mp3.
+- A temporary `POST /api/dev/test-audio` (test tone, to be removed in Stage 4/5).
+- ffmpeg check at startup (lifespan).
+- Frontend: generate test audio, play it, download the mp3.
 
-### ⛔ Этап 3. Fallback MMS — ИСКЛЮЧЁН
-Не реализуется. KazakhTTS2 — единственный движок.
+### ⛔ Stage 3. MMS fallback — EXCLUDED
+Not implemented. KazakhTTS2 is the only engine.
 
-### ✅ Этап 4. KazakhTTS2 — ГОТОВО (основной и единственный движок)
-- Модели: Tacotron2 + вокодер ParallelWaveGAN, 5 голосов
-  (female1..3, male1..2) в `backend/models/kazakhtts2/<voice>/` (не коммитятся).
-- Стек установлен нативно на Windows (Python 3.11): torch 2.12.1+cpu,
-  torchaudio 2.11.0+cpu, espnet 202511, parallel_wavegan 0.6.1. Версии
-  запинены в `requirements.txt` (+ отдельный шаг для parallel_wavegan).
-- `tts/base.py` (`BaseTTSEngine`) + `tts/kazakhtts2_engine.py`: модель грузится
-  один раз в lifespan (дефолтный голос), остальные — лениво; изолирован от API.
-- `tts_service.py`: неблокирующий синтез (`asyncio.to_thread` + семафор=1);
-  `/api/health` отвечает ~50 мс даже во время синтеза (проверено).
-- `/api/voices`, `/api/tts` (весь текст → wav → mp3 + один сегмент-тайминг);
-  `/api/health` отдаёт `model_loaded: true`, `active_engine: "kazakhtts2"`.
-- Frontend: выбор голоса, ввод текста, «Синтезировать», прослушивание,
-  скачивание mp3 (кастомный плеер и подсветка — Этап 6).
-- **Ключевые технические находки** (см. README backend): вокодер грузится
-  отдельно и получает нормализованный `feat_gen`; рантайм-конфиг с абсолютным
-  `stats_file`; shim `scipy.signal.kaiser` для scipy≥1.13.
-- Нативная сборка на Windows удалась — WSL2-план Б не потребовался.
-- **Нормализация громкости**: голоса KazakhTTS2 выдают сигнал сильно разного
-  уровня (female1 ≈0.1, female2 ≈0.69 по пику). Добавлена пиковая нормализация
-  финального WAV к `AUDIO_TARGET_PEAK` (0.95) в `audio_service.normalize_wav_peak`,
-  вызывается в `tts_service` перед конвертацией в mp3. Все голоса приведены к
-  единому уровню (≈ −0.9 dB по пику). Нормализация применяется к финальному
-  (склеенному) аудио, а не по сегментам, чтобы на Этапе 5 не было скачков
-  громкости между предложениями.
-- Остаточное качество (тембр/реверберация отдельных дикторов) — свойство
-  открытых чекпоинтов KazakhTTS2 2022 г., улучшение тембра/дереверберация —
+### ✅ Stage 4. KazakhTTS2 — DONE (the main and only engine)
+- Models: Tacotron2 + ParallelWaveGAN vocoder, 5 voices (female1..3, male1..2) in
+  `backend/models/kazakhtts2/<voice>/` (not committed).
+- The stack was installed natively on Windows (Python 3.11): torch 2.12.1+cpu,
+  torchaudio 2.11.0+cpu, espnet 202511, parallel_wavegan 0.6.1. Versions pinned in
+  `requirements.txt` (+ a separate step for parallel_wavegan).
+- `tts/base.py` (`BaseTTSEngine`) + `tts/kazakhtts2_engine.py`: the model is loaded
+  once in the lifespan (default voice), the rest lazily; isolated from the API.
+- `tts_service.py`: non-blocking synthesis (`asyncio.to_thread` + semaphore=1);
+  `/api/health` responds in ~50 ms even during synthesis (verified).
+- `/api/voices`, `/api/tts` (whole text → wav → mp3 + one timing segment);
+  `/api/health` returns `model_loaded: true`, `active_engine: "kazakhtts2"`.
+- Frontend: voice selection, text input, "Synthesize", playback, mp3 download
+  (custom player and highlighting — Stage 6).
+- **Key technical findings** (see the backend README): the vocoder is loaded
+  separately and gets the normalized `feat_gen`; a runtime config with an absolute
+  `stats_file`; a `scipy.signal.kaiser` shim for scipy≥1.13.
+- The native Windows build succeeded — the WSL2 plan B was not needed.
+- **Loudness normalization**: KazakhTTS2 voices produce very different signal
+  levels (female1 ≈0.1, female2 ≈0.69 peak). Peak normalization of the final WAV
+  to `AUDIO_TARGET_PEAK` (0.95) was added in `audio_service.normalize_wav_peak`,
+  called in `tts_service` before conversion to mp3. All voices are brought to a
+  single level (≈ −0.9 dB peak). Normalization is applied to the final
+  (concatenated) audio, not per segment, so there are no loudness jumps between
+  sentences in Stage 5.
+- Residual quality (timbre/reverberation of individual speakers) is a property of
+  the open 2022 KazakhTTS2 checkpoints; timbre improvement/dereverberation is
   post-MVP.
 
-### ✅ Этап 5. Нормализация, сегменты, кэш — ГОТОВО
-- `text_normalizer.py` — ЕДИНАЯ функция `split_sentences` с char_start/char_end
-  относительно ИСХОДНОГО текста (обслуживает и `/api/split`, и `/api/tts` —
-  границы всегда совпадают). Проверено на примере из ТЗ (0-14, 15-25, 26-42).
-  Плюс `normalize_text` (trim/схлопывание) и эвристика казахской кириллицы.
-- `POST /api/split` — предложения + `warning`, если текст не казахский.
-- Посегментный синтез: каждое предложение → wav, склейка в один wav с тишиной
-  `SEGMENT_SILENCE_SEC`=0.15 c между предложениями, реальные тайминги `segments`
-  в ответе `/api/tts` (проверено: зазоры ровно 0.15 c). Временный
-  `/api/dev/test-audio` удалён.
-- `cache_service.py` — кэш по ключу
+### ✅ Stage 5. Normalization, segments, cache — DONE
+- `text_normalizer.py` — the SINGLE `split_sentences` function with
+  char_start/char_end relative to the SOURCE text (serves both `/api/split` and
+  `/api/tts` — boundaries always match). Verified on the spec example (0-14,
+  15-25, 26-42). Plus `normalize_text` (trim/collapse) and a Kazakh-Cyrillic
+  heuristic.
+- `POST /api/split` — sentences + `warning` if the text is not Kazakh.
+- Per-segment synthesis: each sentence → wav, concatenation into one wav with
+  `SEGMENT_SILENCE_SEC`=0.15 s of silence between sentences, real `segments`
+  timings in the `/api/tts` response (verified: gaps exactly 0.15 s). The
+  temporary `/api/dev/test-audio` was removed.
+- `cache_service.py` — cache keyed by
   `sha256(normalized_text + voice + engine + format + MODEL_VERSION + range)`;
-  json с таймингами рядом с mp3; LRU-очистка по mtime при превышении
-  `CACHE_MAX_BYTES` (500 МБ). Проверено: повторный запрос — `cached: true` за
-  ~28 мс vs ~16 c.
-- `sentence_range` в `/api/tts` — синтез выбранного диапазона; индексы сегментов
-  и char-смещения сохраняются исходными (для подсветки на Этапе 6).
-- Нормализация громкости применяется к финальному (склеенному) аудио.
-- `/api/health` остаётся неблокирующим во время многосегментного синтеза
-  (~15 мс, проверено).
+  a json with timings next to the mp3; LRU eviction by mtime when `CACHE_MAX_BYTES`
+  (500 MB) is exceeded. Verified: a repeated request — `cached: true` in ~28 ms
+  vs ~16 s.
+- `sentence_range` in `/api/tts` — synthesis of the selected range; segment indices
+  and char offsets are preserved as the originals (for highlighting in Stage 6).
+- Loudness normalization is applied to the final (concatenated) audio.
+- `/api/health` stays non-blocking during multi-segment synthesis (~15 ms,
+  verified).
 
-### ✅ Этап 6. Плеер и синхронизация текста — ГОТОВО
-- Фронтенд разбит на компоненты по ТЗ: `api/ttsApi.ts` (типы + клиент),
-  `VoiceSelect`, `TextInput` (счётчик + подсказка), `SentenceView`,
-  `AudioPlayer` (скрытый `<audio>`, forwardRef), `PlayerControls`,
-  `DownloadButton`; оркестрация состояния — в `App.tsx`.
-- `SentenceView`: предложения из `/api/split` как кликабельные спаны; клик —
-  выбор одного, Shift+клик — расширение диапазона (модель from..to), повторный
-  клик — снять; при изменении текста выделение/разметка сбрасываются, `/api/split`
-  вызывается заново с debounce 500 мс.
-- `sentence_range` из выбора уходит в `/api/tts` (весь текст, если не выбрано).
-- Кастомный плеер Старт/Пауза/Стоп (стандартные controls скрыты); кнопки
-  неактивны без аудио; прогресс-бар и таймкод.
-- Подсветка текущего предложения по `timeupdate` (start_sec ≤ t < end_sec),
-  замирает на паузе, снимается на Стоп и по окончании.
-- Клик-перемотка: клик по предложению перематывает на его `start_sec`.
-- typecheck без ошибок; Vite HMR применяет изменения чисто; интерактив —
-  на визуальную проверку пользователем.
+### ✅ Stage 6. Player and text synchronization — DONE
+- The frontend is split into components per the spec: `api/ttsApi.ts` (types +
+  client), `VoiceSelect`, `TextInput` (counter + hint), `SentenceView`,
+  `AudioPlayer` (hidden `<audio>`, forwardRef), `PlayerControls`, `DownloadButton`;
+  state orchestration — in `App.tsx`.
+- `SentenceView`: sentences from `/api/split` as clickable spans; click — select
+  one, Shift-click — extend the range (from..to model), click again — clear; on
+  text change the selection/markup is reset, `/api/split` is called again with a
+  500 ms debounce.
+- `sentence_range` from the selection goes to `/api/tts` (whole text if nothing is
+  selected).
+- Custom Start/Pause/Stop player (native controls hidden); buttons disabled without
+  audio; progress bar and timecode.
+- Highlighting of the current sentence via `timeupdate` (start_sec ≤ t < end_sec),
+  freezes on pause, cleared on Stop and at the end.
+- Click-to-seek: clicking a sentence seeks to its `start_sec`.
+- typecheck passes; Vite HMR applies changes cleanly; interactivity — for the
+  user's visual check.
 
-### Этап 7. UX-доработка (в процессе)
-1. ✅ Индикатор генерации: **прогресс-бар с процентами** на честном потоке
-   (SSE `POST /api/tts/stream`) — событие прогресса приходит после реального
-   синтеза каждого предложения (30/60/90% для 3 предложений, затем склейка 93%,
-   кодирование 98%). Блок ошибок (текст от API) — есть.
-2. ✅ Кнопка скачивания mp3.
-3. ✅ Подсказки («числа словами»), счётчик символов.
-4. ✅ Внешний вид: тёмная тема «Кешкі дала» (палитра флага — голубой #00AFCA +
-   золото #FEC50C), орнамент ою-өрнек (тонкий акцент), знак-солнце, золотое
-   свечение текущего предложения. Русский интерфейс.
+### Stage 7. UX polish (in progress)
+1. ✅ Generation indicator: a **progress bar with percentages** over the honest
+   stream (SSE `POST /api/tts/stream`) — a progress event arrives after the actual
+   synthesis of each sentence (30/60/90% for 3 sentences, then concat 93%, encode
+   98%). Error block (text from the API) — present.
+2. ✅ mp3 download button.
+3. ✅ Hints ("numbers as words"), character counter.
+4. ✅ Look and feel: the dark "Keshki dala" theme (flag palette — blue #00AFCA +
+   gold #FEC50C), the oyu-ornek ornament (a subtle accent), a sun mark, a gold glow
+   of the current sentence. Russian interface.
+5. ✅ Playback speed slider (0.1–3.0, step 0.1, default 1.0) driving
+   `audio.playbackRate`.
 
-Потоковый синтез: `tts_service.synthesize_stream` (async-генератор событий),
-`POST /api/tts/stream` (StreamingResponse/SSE). Непоточный `POST /api/tts`
-сохранён (обёртка над генератором). Неблокирующий health во время потока
-подтверждён (~25 мс).
+Streaming synthesis: `tts_service.synthesize_stream` (an async event generator),
+`POST /api/tts/stream` (StreamingResponse/SSE). The non-streaming `POST /api/tts`
+is kept (a wrapper over the generator). Non-blocking health during the stream is
+confirmed (~25 ms).
 
-### Финализация MVP — ГОТОВО
-- `backend/scripts/download_kazakhtts2.py` — кроссплатформенный идемпотентный
-  скрипт скачивания 5 голосов (только stdlib). Модели воспроизводимо ставятся
-  на любой машине.
-- Корневой `README.md` — полная установка/запуск (backend venv + ffmpeg +
-  parallel_wavegan + скрипт моделей + frontend), архитектура, API, план Б WSL2.
+### MVP finalization — DONE
+- `backend/scripts/download_kazakhtts2.py` — a cross-platform idempotent script to
+  download the 5 voices (stdlib only). Models install reproducibly on any machine.
+- Root `README.md` — full install/run (backend venv + ffmpeg + parallel_wavegan +
+  the model script + frontend), architecture, API, the WSL2 plan B.
 
-## Definition of Done (MVP) — ✅ ВЫПОЛНЕНО
+## Definition of Done (MVP) — ✅ MET
 
-Все пункты ТЗ (кроме исключённого MMS-fallback) закрыты:
-- ✅ backend локально на CPU; `/api/health` отвечает во время синтеза;
-- ✅ frontend локально; ввод казахского текста → синтез аудио;
-- ✅ прослушивание Старт/Пауза/Стоп; подсветка текущего предложения синхронно;
-- ✅ выбор диапазона подряд идущих предложений и озвучка только их;
-- ✅ скачивание mp3;
-- ✅ KazakhTTS2 — основной и единственный движок;
-- ✅ длинный текст разбивается на сегменты; тайминги в API;
-- ✅ кэш с LRU (повторный запрос — из кэша);
-- ✅ README с инструкциями (ffmpeg, WSL2-план Б, скрипт моделей).
+All spec items (except the excluded MMS fallback) are closed:
+- ✅ backend locally on CPU; `/api/health` responds during synthesis;
+- ✅ frontend locally; Kazakh text input → audio synthesis;
+- ✅ Start/Pause/Stop playback; highlighting of the current sentence in sync;
+- ✅ selecting a range of consecutive sentences and synthesizing only them;
+- ✅ mp3 download;
+- ✅ KazakhTTS2 — the main and only engine;
+- ✅ long text is split into segments; timings in the API;
+- ✅ cache with LRU (a repeated request — from cache);
+- ✅ README with instructions (ffmpeg, the WSL2 plan B, the model script).
 
-Сверх ТЗ: потоковый синтез с прогресс-баром (SSE), нормализация громкости,
-казахское оформление UI (тёмная тема + орнамент).
+Beyond the spec: streaming synthesis with a progress bar (SSE), loudness
+normalization, Kazakh UI styling (dark theme + ornament), a playback speed slider.
 
-## Идеи после MVP (не начинать без подтверждения)
+## Post-MVP ideas (do not start without confirmation)
 
-- Смена голоса по умолчанию (female2/female3 звучат чище female1).
-- Автотесты (pytest): единая функция разбиения, кэш/LRU, sentence_range.
-- KazEmoTTS (эмоции), экспорт в ONNX (ускорение CPU), латиница (transliteration),
-  пословная подсветка (forced alignment), пакетная генерация длинных текстов.
-- Первый git-коммит (по запросу пользователя).
+- Change the default voice (female2/female3 sound cleaner than female1).
+- Automated tests (pytest): the single splitting function, cache/LRU,
+  sentence_range.
+- KazEmoTTS (emotions), ONNX export (CPU speedup), Latin script (transliteration),
+  word-level highlighting (forced alignment), batch generation of long texts.
+- Server deployment and an Android (Google Play) app — see
+  [DEPLOYMENT.md](DEPLOYMENT.md).
 
-## Ключевые архитектурные правила (сквозные)
+## Key architectural rules (cross-cutting)
 
-- venv только в `backend/.venv`; версии пакетов запинены в `requirements.txt`.
-- Неблокирующий инференс: thread pool + семафор = 1; модель грузится один раз
-  при старте; `/api/health` всегда отвечает мгновенно.
-- Единая функция разбиения на предложения на backend; frontend использует
-  только результат `/api/split`.
-- mp3 — единственный формат скачивания в MVP; внутренний формат — wav;
-  конвертация в конце через ffmpeg; параметр `format` зарезервирован.
-- Не коммитить: `models/`, `.venv`, `storage/cache`, `storage/tmp`,
+- venv only in `backend/.venv`; package versions pinned in `requirements.txt`.
+- Non-blocking inference: thread pool + semaphore = 1; the model is loaded once at
+  startup; `/api/health` always responds instantly.
+- A single sentence-splitting function on the backend; the frontend uses only the
+  result of `/api/split`.
+- mp3 is the only download format in the MVP; the internal format is wav;
+  conversion at the end via ffmpeg; the `format` parameter is reserved.
+- Do not commit: `models/`, `.venv`, `storage/cache`, `storage/tmp`,
   `node_modules`, `dist`.
-- Комментарии в коде — на русском; логирование через `logging`, не `print`;
-  API-логика и TTS-инференс не смешиваются.
+- Code comments and docstrings are in English; user-facing UI text and API error
+  messages stay in Russian; log via `logging`, not `print`; API logic and TTS
+  inference are not mixed.

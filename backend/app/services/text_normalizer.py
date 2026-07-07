@@ -1,42 +1,42 @@
-"""Нормализация текста и ЕДИНАЯ функция разбиения на предложения.
+"""Text normalization and the SINGLE sentence-splitting function.
 
-Ключевое архитектурное правило проекта: разбиение на предложения выполняется
-ТОЛЬКО здесь и обслуживает и `/api/split`, и `/api/tts`. Frontend никогда не
-разбивает текст сам — использует только результат `/api/split`. Иначе границы
-предложений на фронте и бэке разойдутся, и подсветка/выбор диапазона сломаются.
+Key architectural rule of the project: sentence splitting happens ONLY here and
+serves both `/api/split` and `/api/tts`. The frontend never splits text itself —
+it uses only the result of `/api/split`. Otherwise sentence boundaries on the
+front and back would diverge, breaking highlighting and range selection.
 
-Смещения char_start/char_end считаются относительно ИСХОДНОГО текста (как его
-прислал frontend), а не нормализованного, — чтобы подсветка попадала в тот же
-текст, что отображается в textarea.
+char_start/char_end offsets are computed relative to the SOURCE text (as the
+frontend sent it), not the normalized one, so that highlighting lands in the same
+text shown in the textarea.
 """
 
 import re
 
-# Символы-терминаторы предложения.
+# Sentence terminator characters.
 _TERMINATORS = ".!?…"
 
-# Казахская кириллица (спец. буквы) — для эвристической проверки языка.
+# Kazakh-specific Cyrillic letters — for the language heuristic.
 _KAZAKH_SPECIFIC = set("әғқңөұүһі")
-# Кириллица целиком — блок Unicode U+0400–U+04FF (включает и русские, и
-# казах-специфичные буквы ә ғ қ ң ө ұ ү һ і).
+# Cyrillic as a whole — Unicode block U+0400–U+04FF (includes both Russian and
+# the Kazakh-specific letters ә ғ қ ң ө ұ ү һ і).
 _CYRILLIC = re.compile(r"[Ѐ-ӿ]")
 
 
 def normalize_text(text: str) -> str:
-    """Trim + схлопывание любых пробельных последовательностей в один пробел.
+    """Trim + collapse any whitespace runs into a single space.
 
-    Используется для нормализации текста перед синтезом и для формирования
-    ключа кэша (чтобы «текст  с   пробелами» и «текст с пробелами» совпадали).
+    Used to normalize text before synthesis and to build the cache key (so that
+    "text  with   spaces" and "text with spaces" match).
     """
     return " ".join(text.split()).strip()
 
 
 def split_sentences(text: str) -> list[dict]:
-    """Разбить текст на предложения с сохранением смещений в исходном тексте.
+    """Split text into sentences, preserving offsets into the source text.
 
-    Возвращает список словарей: {index, text, char_start, char_end}, где
-    text == исходный срез text[char_start:char_end] (обрезанный от пробелов по
-    краям), char_end — не включительно.
+    Returns a list of dicts: {index, text, char_start, char_end}, where
+    text == the source slice text[char_start:char_end] (trimmed of surrounding
+    whitespace), char_end is exclusive.
     """
     result: list[dict] = []
     n = len(text)
@@ -44,7 +44,7 @@ def split_sentences(text: str) -> list[dict]:
     i = 0
     while i < n:
         if text[i] in _TERMINATORS:
-            # Захватываем подряд идущие терминаторы (?!, ..., !!).
+            # Capture consecutive terminators (?!, ..., !!).
             j = i + 1
             while j < n and text[j] in _TERMINATORS:
                 j += 1
@@ -53,21 +53,21 @@ def split_sentences(text: str) -> list[dict]:
             i = j
         else:
             i += 1
-    # Хвост без завершающего знака препинания.
+    # Tail without a trailing punctuation mark.
     if start < n:
         _append_sentence(result, text, start, n)
     return result
 
 
 def _append_sentence(result: list[dict], text: str, raw_start: int, raw_end: int) -> None:
-    """Добавить предложение, обрезав пробелы по краям сырого диапазона."""
+    """Append a sentence, trimming whitespace at the edges of the raw range."""
     s, e = raw_start, raw_end
     while s < e and text[s].isspace():
         s += 1
     while e > s and text[e - 1].isspace():
         e -= 1
     if e <= s:
-        # Пустой диапазон (только пробелы/знаки без содержимого) — пропускаем.
+        # Empty range (only whitespace/marks with no content) — skip.
         return
     result.append(
         {
@@ -80,10 +80,10 @@ def _append_sentence(result: list[dict], text: str, raw_start: int, raw_end: int
 
 
 def looks_like_kazakh(text: str) -> bool:
-    """Грубая эвристика: похож ли текст на казахскую кириллицу.
+    """Rough heuristic: does the text look like Kazakh Cyrillic?
 
-    True, если в тексте есть кириллица и присутствует хотя бы одна
-    казах-специфичная буква ИЛИ кириллица составляет заметную долю букв.
+    True if the text contains Cyrillic and has at least one Kazakh-specific letter
+    OR Cyrillic makes up a noticeable share of the letters.
     """
     letters = [c for c in text.lower() if c.isalpha()]
     if not letters:
@@ -97,7 +97,10 @@ def looks_like_kazakh(text: str) -> bool:
 
 
 def kazakh_warning(text: str) -> str | None:
-    """Вернуть текст предупреждения, если ввод не похож на казахскую кириллицу."""
+    """Return a warning message if the input does not look like Kazakh Cyrillic.
+
+    The message is user-facing (shown in the UI), so it stays in Russian.
+    """
     if not looks_like_kazakh(text):
         return (
             "Текст не похож на казахскую кириллицу — модель KazakhTTS2 "

@@ -1,14 +1,14 @@
-# Прод-развёртывание в одном домене: web (Caddy) раздаёт статику фронтенда и
-# проксирует /api на backend. CORS не нужен (один origin).
+# Single-domain production deployment: web (Caddy) serves the frontend static
+# assets and proxies /api to the backend. No CORS needed (one origin).
 #
-# Первый запуск:
+# First run:
 #   1) docker compose build
 #   2) docker compose run --rm backend python scripts/download_kazakhtts2.py
-#      (качает модели в volume `models`, ~600 МБ)
+#      (downloads models into the `models` volume, ~600 MB)
 #   3) docker compose up -d
 #
-# Локально открыть http://localhost. Для прода задать SITE_ADDRESS=<домен> в .env
-# (Caddy сам получит HTTPS).
+# Locally open http://localhost. For production set SITE_ADDRESS=<domain> in .env
+# (Caddy obtains HTTPS itself).
 
 services:
   backend:
@@ -16,7 +16,7 @@ services:
     environment:
       MODELS_DIR: /models
       STORAGE_DIR: /storage
-      CORS_ORIGINS: "" # один домен → CORS не нужен
+      CORS_ORIGINS: "" # single domain → CORS not needed
       DEFAULT_VOICE: ${DEFAULT_VOICE:-female1}
     volumes:
       - models:/models
@@ -29,7 +29,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_BACKEND_URL: "" # относительные пути → проксируются на backend
+        VITE_BACKEND_URL: "" # relative paths → proxied to the backend
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-:80}
     ports:

@@ -1,46 +1,49 @@
 # Kazakh TTS App
 
-Локальное веб-приложение для синтеза речи из казахского текста (кириллица).
-Работает полностью локально, без облачных API, на CPU.
+Local web application for synthesizing speech from Kazakh text (Cyrillic).
+Runs fully locally, without cloud APIs, on CPU.
 
-## Стек
+## Stack
 
-- **Backend**: Python 3.10–3.11, FastAPI + Uvicorn, PyTorch (CPU-сборка).
-  Единственный TTS-движок — KazakhTTS2 (ESPnet2, ISSAI). Fallback-движок MMS
-  из проекта исключён — используем только KazakhTTS2.
-- **Аудио**: рабочий формат конвейера — wav; конвертация в mp3 только через
-  `subprocess` + ffmpeg (pydub не использовать). ffmpeg должен быть в PATH.
+- **Backend**: Python 3.10–3.11, FastAPI + Uvicorn, PyTorch (CPU build).
+  The only TTS engine is KazakhTTS2 (ESPnet2, ISSAI). The MMS fallback engine
+  was dropped from the project — we use KazakhTTS2 only.
+- **Audio**: the pipeline working format is wav; conversion to mp3 only via
+  `subprocess` + ffmpeg (do not use pydub). ffmpeg must be on PATH.
 - **Frontend**: React + Vite + TypeScript.
 
-## Ключевые правила
+## Key rules
 
-- **venv**: все Python-зависимости ставятся в `backend/.venv`. Активировать
-  перед `pip install` и запуском `uvicorn`. Версии пакетов фиксировать в
-  `requirements.txt` (ESPnet чувствителен к версиям).
-- **Неблокирующий инференс**: TTS-инференс вызывается только через
-  `asyncio.to_thread` (или `run_in_executor`), никогда напрямую в обработчике
-  FastAPI. Параллельные синтезы ограничены семафором = 1. `/api/health` должен
-  отвечать мгновенно даже во время синтеза. Модель загружается один раз при
-  старте (lifespan), не на каждый запрос.
-- **Единая функция разбиения на предложения**: разбиение текста на предложения
-  выполняется ТОЛЬКО на backend (`text_normalizer.py`) и обслуживает и
-  `/api/split`, и `/api/tts`. Frontend никогда не разбивает текст сам — только
-  использует результат `/api/split`, иначе подсветка и выбор диапазона
-  сломаются из-за расхождения границ.
-- **mp3 — единственный формат скачивания в MVP**. Внутренний рабочий формат —
-  wav (синтез и склейка сегментов), конвертация в mp3 — последний шаг через
-  ffmpeg. Параметр `format` в API сохранён для будущего расширения (wav, ogg,
-  m4a), но в UI на первом этапе выбор формата не показывается.
-- Не коммитить веса моделей (`backend/models/`), `.venv`, `backend/storage/cache`,
-  `backend/storage/tmp`, `node_modules`, `dist`.
-- Комментарии в коде — на русском языке. Ошибки логировать через `logging`,
-  не `print`.
-- Не смешивать API-логику и TTS-инференс (движки изолированы в `app/tts/`).
+- **venv**: all Python dependencies are installed into `backend/.venv`. Activate
+  it before `pip install` and before running `uvicorn`. Pin package versions in
+  `requirements.txt` (ESPnet is version-sensitive).
+- **Non-blocking inference**: TTS inference is called only via
+  `asyncio.to_thread` (or `run_in_executor`), never directly inside a FastAPI
+  handler. Concurrent syntheses are limited by a semaphore = 1. `/api/health`
+  must respond instantly even during synthesis. The model is loaded once at
+  startup (lifespan), not on every request.
+- **Single sentence-splitting function**: splitting text into sentences happens
+  ONLY on the backend (`text_normalizer.py`) and serves both `/api/split` and
+  `/api/tts`. The frontend never splits text itself — it only uses the result of
+  `/api/split`, otherwise highlighting and range selection break due to diverging
+  boundaries.
+- **mp3 is the only download format in the MVP**. The internal working format is
+  wav (synthesis and segment concatenation); conversion to mp3 is the final step
+  via ffmpeg. The `format` parameter is kept in the API for future extension
+  (wav, ogg, m4a), but the format choice is not shown in the UI in the first
+  stage.
+- Do not commit model weights (`backend/models/`), `.venv`,
+  `backend/storage/cache`, `backend/storage/tmp`, `node_modules`, `dist`.
+- **Code comments and docstrings are in English.** The UI is multilingual
+  (ru/kk/en, default ru) via the frontend i18n layer (`src/i18n/`) — add new UI
+  strings as translation keys, not hardcoded text. Backend API error messages stay
+  in Russian. Log errors via `logging`, not `print`.
+- Do not mix API logic and TTS inference (engines are isolated in `app/tts/`).
 
-## Порядок этапов
+## Stage order
 
-Разработка идёт по этапам ТЗ (`Kazakh_TTS_App_Specification.md`): 1 — каркас,
-2 — audio pipeline без модели, 4 — KazakhTTS2 (основной и единственный движок),
-5 — нормализация/сегменты/кэш, 6 — плеер и синхронизация, 7 — UX. Этап 3
-(fallback MMS) исключён по решению команды. Переходить к следующему этапу
-только после подтверждения пользователя.
+Development follows the spec stages (`Kazakh_TTS_App_Specification.md`): 1 —
+skeleton, 2 — audio pipeline without a model, 4 — KazakhTTS2 (the main and only
+engine), 5 — normalization/segments/cache, 6 — player and synchronization,
+7 — UX. Stage 3 (MMS fallback) was dropped by team decision. Move to the next
+stage only after user confirmation.

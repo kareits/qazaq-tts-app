@@ -1,7 +1,7 @@
-"""Работа с аудио: проверка ffmpeg, замер длительности WAV, конвертация в mp3.
+"""Audio helpers: ffmpeg check, WAV duration, conversion to mp3.
 
-Конвертация выполняется прямым вызовом ffmpeg через subprocess (pydub НЕ
-используется — библиотека почти не поддерживается, прямой вызов надёжнее).
+Conversion is done by calling ffmpeg directly via subprocess (pydub is NOT used —
+the library is barely maintained, a direct call is more reliable).
 """
 
 import logging
@@ -15,12 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 def normalize_wav_peak(wav_path: str, target_peak: float) -> None:
-    """Пиковая нормализация громкости WAV на месте.
+    """Peak-normalize the WAV loudness in place.
 
-    Масштабирует сигнал так, чтобы максимальная амплитуда стала равна
-    target_peak (< 1.0 — без клиппинга). Применять к ФИНАЛЬНОМУ (уже склеенному)
-    WAV, а не к отдельным сегментам, иначе между предложениями будут скачки
-    громкости.
+    Scales the signal so the maximum amplitude equals target_peak (< 1.0 — no
+    clipping). Apply it to the FINAL (already concatenated) WAV, not to individual
+    segments, otherwise there would be loudness jumps between sentences.
     """
     data, samplerate = sf.read(wav_path)
     peak = float(np.max(np.abs(data))) if data.size else 0.0
@@ -30,13 +29,13 @@ def normalize_wav_peak(wav_path: str, target_peak: float) -> None:
 
 
 def is_ffmpeg_available() -> bool:
-    """Проверяет, что ffmpeg доступен в PATH. Вызывается при старте приложения."""
+    """Check that ffmpeg is available on PATH. Called at application startup."""
 
     return shutil.which("ffmpeg") is not None
 
 
 def get_wav_duration_sec(wav_path: str) -> float:
-    """Возвращает длительность WAV-файла в секундах."""
+    """Return the WAV file duration in seconds."""
 
     info = sf.info(wav_path)
     return info.frames / info.samplerate
@@ -47,13 +46,13 @@ def concat_segments(
     out_path: str,
     silence_sec: float,
 ) -> list[tuple[float, float]]:
-    """Склеить WAV-сегменты в один файл, вставив короткую тишину между ними.
+    """Concatenate WAV segments into one file, inserting a short silence between.
 
-    Возвращает тайминги (start_sec, end_sec) каждого сегмента в итоговом аудио
-    (тишина между предложениями входит в промежутки, но не в сами сегменты).
+    Returns the (start_sec, end_sec) timing of each segment in the resulting audio
+    (the silence between sentences falls into the gaps, not into the segments).
     """
     if not wav_paths:
-        raise ValueError("Нет сегментов для склейки")
+        raise ValueError("No segments to concatenate")
 
     chunks: list[np.ndarray] = []
     timings: list[tuple[float, float]] = []
@@ -68,7 +67,7 @@ def concat_segments(
             silence = np.zeros(int(sr * silence_sec), dtype=np.float32)
         elif sr != samplerate:
             raise ValueError(
-                f"Разная частота дискретизации сегментов: {sr} != {samplerate}"
+                f"Segments have different sample rates: {sr} != {samplerate}"
             )
 
         start = cursor
@@ -79,7 +78,7 @@ def concat_segments(
         chunks.append(data.astype(np.float32))
         cursor = end
 
-        # Тишина между предложениями (не после последнего).
+        # Silence between sentences (not after the last one).
         if i < len(wav_paths) - 1 and silence is not None and len(silence):
             chunks.append(silence)
             cursor += silence_sec
@@ -90,15 +89,15 @@ def concat_segments(
 
 
 def convert_wav_to_mp3(wav_path: str, mp3_path: str, bitrate: str = "128k") -> None:
-    """Конвертирует WAV в MP3 через прямой вызов ffmpeg.
+    """Convert WAV to MP3 by calling ffmpeg directly.
 
-    Бросает RuntimeError с понятным сообщением, если ffmpeg завершился с ошибкой.
+    Raises RuntimeError with a clear message if ffmpeg exits with an error.
     """
 
     result = subprocess.run(
         [
             "ffmpeg",
-            "-y",  # перезаписать файл назначения, если существует
+            "-y",  # overwrite the destination file if it exists
             "-i", wav_path,
             "-b:a", bitrate,
             mp3_path,
@@ -107,5 +106,7 @@ def convert_wav_to_mp3(wav_path: str, mp3_path: str, bitrate: str = "128k") -> N
         text=True,
     )
     if result.returncode != 0:
-        logger.error("Ошибка ffmpeg при конвертации %s -> %s: %s", wav_path, mp3_path, result.stderr)
-        raise RuntimeError(f"Не удалось сконвертировать WAV в MP3: {result.stderr}")
+        logger.error(
+            "ffmpeg error converting %s -> %s: %s", wav_path, mp3_path, result.stderr
+        )
+        raise RuntimeError(f"Failed to convert WAV to MP3: {result.stderr}")

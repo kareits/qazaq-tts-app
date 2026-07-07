@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  // Базовый URL backend API. Пусто/относительный путь — для схемы «один домен».
+  // Base URL of the backend API. Empty/relative path — for the single-domain setup.
   readonly VITE_BACKEND_URL?: string
 }
 

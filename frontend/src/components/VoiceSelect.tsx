@@ -1,4 +1,5 @@
 import type { Voice } from '../api/ttsApi'
+import { useI18n } from '../i18n/I18nContext'
 
 interface Props {
   voices: Voice[]
@@ -7,11 +8,12 @@ interface Props {
   onChange: (voice: string) => void
 }
 
-// Выбор голоса синтеза.
+// Synthesis voice selector.
 export function VoiceSelect({ voices, value, disabled, onChange }: Props) {
+  const { t } = useI18n()
   return (
     <label className="field">
-      <span className="field-label">Голос</span>
+      <span className="field-label">{t('voiceLabel')}</span>
       <select
         value={value}
         disabled={disabled}

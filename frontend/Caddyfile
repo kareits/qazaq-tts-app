@@ -1,10 +1,11 @@
-# Адрес сайта из env SITE_ADDRESS (по умолчанию :80).
-# Для прода задать домен (напр. tts.example.kz) — Caddy сам получит HTTPS.
+# Site address from the env var SITE_ADDRESS (default :80).
+# For production set a domain (e.g. tts.example.kz) — Caddy obtains HTTPS itself.
 {$SITE_ADDRESS::80} {
 	encode gzip
 
-	# API → backend. Полный путь /api/... сохраняется (не strip).
-	# flush_interval -1 отключает буферизацию — важно для SSE (/api/tts/stream).
+	# API → backend. The full /api/... path is preserved (not stripped).
+	# flush_interval -1 disables response buffering — important for SSE
+	# (/api/tts/stream).
 	@api path /api/*
 	handle @api {
 		reverse_proxy backend:8000 {
@@ -12,7 +13,7 @@
 		}
 	}
 
-	# SPA: отдаём статику, неизвестные пути → index.html.
+	# SPA: serve static assets, route unknown paths to index.html.
 	handle {
 		root * /srv
 		try_files {path} /index.html

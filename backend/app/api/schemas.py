@@ -1,10 +1,10 @@
-"""Pydantic-схемы API."""
+"""Pydantic API schemas."""
 
 from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
-    """Ответ /api/health — должен приходить мгновенно даже во время синтеза."""
+    """Response of /api/health — must return instantly even during synthesis."""
 
     status: str
     device: str
@@ -14,7 +14,7 @@ class HealthResponse(BaseModel):
 
 
 class Voice(BaseModel):
-    """Описание голоса для /api/voices."""
+    """Voice description for /api/voices."""
 
     id: str
     name: str
@@ -27,13 +27,13 @@ class VoicesResponse(BaseModel):
 
 
 class SplitRequest(BaseModel):
-    """Запрос /api/split."""
+    """Request of /api/split."""
 
     text: str
 
 
 class Sentence(BaseModel):
-    """Предложение с смещениями в исходном тексте (для подсветки на frontend)."""
+    """A sentence with offsets into the source text (for frontend highlighting)."""
 
     index: int
     text: str
@@ -42,15 +42,14 @@ class Sentence(BaseModel):
 
 
 class SplitResponse(BaseModel):
-    """Ответ /api/split. warning != null, если текст не похож на казахский."""
+    """Response of /api/split. warning != null if the text does not look Kazakh."""
 
     sentences: list[Sentence]
     warning: str | None = None
 
 
 class SentenceRange(BaseModel):
-    """Диапазон подряд идущих предложений (включительно). Применяется на
-    Этапах 5-6; на Этапе 4 принимается, но не используется."""
+    """Range of consecutive sentences (inclusive)."""
 
     from_: int = Field(alias="from")
     to: int
@@ -59,18 +58,18 @@ class SentenceRange(BaseModel):
 
 
 class TTSRequest(BaseModel):
-    """Запрос /api/tts."""
+    """Request of /api/tts."""
 
     text: str
     voice: str = "female1"
-    # В MVP формат всегда mp3; параметр оставлен для будущего расширения.
+    # In the MVP the format is always mp3; the parameter is kept for future use.
     format: str = "mp3"
     engine: str = "kazakhtts2"
     sentence_range: SentenceRange | None = None
 
 
 class Segment(BaseModel):
-    """Тайминги одного предложения в итоговом аудио."""
+    """Timing of a single sentence within the final audio."""
 
     index: int
     char_start: int
@@ -80,7 +79,7 @@ class Segment(BaseModel):
 
 
 class TTSResponse(BaseModel):
-    """Ответ /api/tts."""
+    """Response of /api/tts."""
 
     audio_url: str
     format: str

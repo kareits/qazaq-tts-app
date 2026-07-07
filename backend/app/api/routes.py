@@ -1,4 +1,4 @@
-"""Эндпоинты API."""
+"""API endpoints."""
 
 import json
 import logging
@@ -24,9 +24,9 @@ router = APIRouter(prefix="/api")
 
 @router.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    """Проверка состояния backend. Отвечает мгновенно даже во время синтеза,
-    так как не обращается к модели напрямую (состояние движка читается из
-    сервисного слоя без блокировок)."""
+    """Backend health check. Responds instantly even during synthesis because it
+    does not touch the model directly (engine state is read from the service
+    layer without blocking)."""
 
     return HealthResponse(
         status="ok",
@@ -39,24 +39,24 @@ async def health() -> HealthResponse:
 
 @router.get("/voices", response_model=VoicesResponse)
 async def voices() -> VoicesResponse:
-    """Список доступных голосов TTS-движка."""
+    """List of available TTS engine voices."""
 
     return VoicesResponse(voices=tts_service.list_voices())
 
 
 @router.post("/split", response_model=SplitResponse)
 async def split(request: SplitRequest) -> SplitResponse:
-    """Разбить текст на предложения (для отображения кликабельных предложений
-    на frontend ДО синтеза). Использует ту же функцию, что и /api/tts."""
+    """Split text into sentences (to display clickable sentences on the frontend
+    BEFORE synthesis). Uses the same function as /api/tts."""
 
     return SplitResponse(**tts_service.split(request.text))
 
 
 @router.post("/tts", response_model=TTSResponse)
 async def tts(request: TTSRequest) -> TTSResponse:
-    """Синтезировать аудио из текста (или диапазона предложений). Инференс
-    неблокирующий (thread pool + семафор=1), поэтому /api/health отвечает даже
-    во время синтеза."""
+    """Synthesize audio from text (or a sentence range). Inference is
+    non-blocking (thread pool + semaphore=1), so /api/health responds even during
+    synthesis."""
 
     if not tts_service.is_model_loaded():
         raise HTTPException(status_code=503, detail="TTS-модель не загружена")
@@ -71,10 +71,10 @@ async def tts(request: TTSRequest) -> TTSResponse:
             sentence_range=sentence_range,
         )
     except ValueError as exc:
-        # Ошибки валидации входных данных (пустой текст, лимит, голос, диапазон).
+        # Input validation errors (empty text, limit, voice, range).
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Ошибка синтеза")
+        logger.exception("Synthesis error")
         raise HTTPException(status_code=500, detail=f"Ошибка синтеза: {exc}") from exc
 
     return TTSResponse(**result)
@@ -90,9 +90,9 @@ def _sentence_range_dict(request: TTSRequest) -> dict | None:
 
 @router.post("/tts/stream")
 async def tts_stream(request: TTSRequest) -> StreamingResponse:
-    """Потоковый синтез с прогрессом (Server-Sent Events). Отдаёт события
-    `data: {...}` — прогресс по мере готовности каждого предложения и финальный
-    результат. Инференс неблокирующий; /api/health отвечает даже во время синтеза."""
+    """Streaming synthesis with progress (Server-Sent Events). Emits `data: {...}`
+    events — progress as each sentence becomes ready plus the final result.
+    Inference is non-blocking; /api/health responds even during synthesis."""
 
     if not tts_service.is_model_loaded():
         raise HTTPException(status_code=503, detail="TTS-модель не загружена")
@@ -112,7 +112,7 @@ async def tts_stream(request: TTSRequest) -> StreamingResponse:
             payload = {"type": "error", "detail": str(exc)}
             yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
         except Exception as exc:  # noqa: BLE001
-            logger.exception("Ошибка потокового синтеза")
+            logger.exception("Streaming synthesis error")
             payload = {"type": "error", "detail": f"Ошибка синтеза: {exc}"}
             yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
@@ -125,8 +125,8 @@ async def tts_stream(request: TTSRequest) -> StreamingResponse:
 
 @router.get("/audio/{filename}")
 async def get_audio(filename: str) -> FileResponse:
-    """Отдаёт готовый аудиофайл из кэша с заголовком, чтобы браузер мог его
-    скачать (attachment; filename=...)."""
+    """Serve a ready-made audio file from the cache with a header so the browser
+    can download it (attachment; filename=...)."""
 
     file_path = CACHE_DIR / filename
     if not file_path.is_file():

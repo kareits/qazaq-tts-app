@@ -1,25 +1,25 @@
 # Kazakh TTS App
 
-Локальное веб-приложение для синтеза речи из казахского текста (кириллица).
-Работает полностью локально, без облачных API, на CPU.
+Local web application for synthesizing speech from Kazakh text (Cyrillic). Runs
+fully locally, without cloud APIs, on CPU.
 
-- **Backend**: Python + FastAPI, движок **KazakhTTS2** (ESPnet2 Tacotron2 +
-  вокодер ParallelWaveGAN), инференс на CPU.
+- **Backend**: Python + FastAPI, the **KazakhTTS2** engine (ESPnet2 Tacotron2 +
+  ParallelWaveGAN vocoder), CPU inference.
 - **Frontend**: React + Vite + TypeScript.
-- **Аудио**: рабочий формат — wav, скачивание — mp3 (конвертация через ffmpeg).
+- **Audio**: working format is wav, download format is mp3 (conversion via ffmpeg).
 
-Возможности: ввод казахского текста, выбор из 5 голосов, синтез (с прогрессом),
-воспроизведение (Старт/Пауза/Стоп), подсветка текущего предложения синхронно со
-звуком, выбор диапазона предложений для озвучки, скачивание mp3, кэширование.
+Features: Kazakh text input, choice of 5 voices, synthesis (with progress),
+playback (Start/Pause/Stop), highlighting of the current sentence in sync with
+the audio, selecting a sentence range to synthesize, mp3 download, caching.
 
-## Требования
+## Requirements
 
 - **Python 3.10–3.11**
-- **Node.js 18+** и npm
-- **ffmpeg** в PATH (конвертация wav → mp3)
-- ~1.5 ГБ места под модели (5 голосов), ~600 МБ трафика на их скачивание
+- **Node.js 18+** and npm
+- **ffmpeg** on PATH (wav → mp3 conversion)
+- ~1.5 GB of space for the models (5 voices), ~600 MB of download traffic
 
-## Установка и запуск
+## Install and run
 
 ### 1. Backend
 
@@ -31,11 +31,11 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -U pip
 pip install -r requirements.txt
-# parallel_wavegan ставится отдельно (его setup.py ломается в изолированной сборке):
+# parallel_wavegan is installed separately (its setup.py breaks in an isolated build):
 pip install --no-build-isolation parallel_wavegan==0.6.1
-# Скачать модели KazakhTTS2 (5 голосов) в backend/models/kazakhtts2/:
+# Download the KazakhTTS2 models (5 voices) into backend/models/kazakhtts2/:
 python scripts/download_kazakhtts2.py
-# Запуск:
+# Run:
 uvicorn app.main:app --reload
 ```
 
@@ -52,8 +52,8 @@ python scripts/download_kazakhtts2.py
 uvicorn app.main:app --reload
 ```
 
-Backend поднимется на `http://127.0.0.1:8000` (Swagger: `/docs`). Модель грузится
-один раз при старте. Подробности — в [backend/README.md](backend/README.md).
+The backend comes up on `http://127.0.0.1:8000` (Swagger: `/docs`). The model is
+loaded once at startup. Details — in [backend/README.md](backend/README.md).
 
 ### 2. Frontend
 
@@ -63,82 +63,85 @@ npm install
 npm run dev
 ```
 
-Frontend откроется на `http://localhost:5173` и будет обращаться к backend на
-`http://127.0.0.1:8000` (CORS настроен).
+The frontend opens on `http://localhost:5173` and talks to the backend at
+`http://127.0.0.1:8000` (CORS configured).
 
-## Установка ffmpeg
+## Installing ffmpeg
 
-- **Windows**: `winget install Gyan.FFmpeg` (или скачать сборку и добавить в PATH)
+- **Windows**: `winget install Gyan.FFmpeg` (or download a build and add it to PATH)
 - **macOS**: `brew install ffmpeg`
 - **Linux**: `sudo apt install ffmpeg`
 
-Backend проверяет наличие ffmpeg при старте и пишет ошибку в лог, если его нет.
+The backend checks for ffmpeg at startup and logs an error if it is missing.
 
-## Модели KazakhTTS2
+## KazakhTTS2 models
 
-Веса не хранятся в репозитории. Их скачивает `backend/scripts/download_kazakhtts2.py`
-с серверов ISSAI (репозиторий [IS2AI/Kazakh_TTS](https://github.com/IS2AI/Kazakh_TTS))
-и раскладывает в `backend/models/kazakhtts2/<voice>/`. Голоса: `female1`, `female2`,
-`female3`, `male1`, `male2` (по умолчанию `female1`).
+The weights are not stored in the repository. `backend/scripts/download_kazakhtts2.py`
+downloads them from the ISSAI servers (repository
+[IS2AI/Kazakh_TTS](https://github.com/IS2AI/Kazakh_TTS)) and lays them out in
+`backend/models/kazakhtts2/<voice>/`. Voices: `female1`, `female2`, `female3`,
+`male1`, `male2` (default `female1`).
 
-> Лицензия KazakhTTS2 — **CC-BY-4.0** (коммерческое использование разрешено при
-> атрибуции). Требования по атрибуции и деталям — в [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+> KazakhTTS2 license — **CC-BY-4.0** (commercial use allowed with attribution).
+> Attribution requirements and details — in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-## Развёртывание на сервере (Docker)
+## Server deployment (Docker)
 
-Прод-схема: **один домен** — Caddy раздаёт статику фронтенда и проксирует `/api`
-на backend (авто-HTTPS), поэтому CORS не нужен. Файлы: `docker-compose.yml`,
-`backend/Dockerfile`, `frontend/Dockerfile` + `frontend/Caddyfile`.
+Production layout: **single domain** — Caddy serves the frontend static assets
+and proxies `/api` to the backend (auto-HTTPS), so no CORS is needed. Files:
+`docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile` +
+`frontend/Caddyfile`.
 
 ```bash
-cp .env.example .env          # задать SITE_ADDRESS (домен для HTTPS)
+cp .env.example .env          # set SITE_ADDRESS (domain for HTTPS)
 docker compose build
-docker compose run --rm backend python scripts/download_kazakhtts2.py  # модели в volume (~600 МБ, один раз)
+docker compose run --rm backend python scripts/download_kazakhtts2.py  # models into a volume (~600 MB, once)
 docker compose up -d
 ```
 
-Локально откроется на `http://localhost`. Для прода укажи домен в `.env`
-(`SITE_ADDRESS=tts.example.kz`) — Caddy сам выпустит TLS-сертификат.
+Locally it opens on `http://localhost`. For production set the domain in `.env`
+(`SITE_ADDRESS=tts.example.kz`) — Caddy issues the TLS certificate itself.
 
-Настройка через переменные окружения backend: `CORS_ORIGINS` (пусто при одном
-домене), `MAX_TEXT_LENGTH`, `CACHE_MAX_BYTES`, `DEFAULT_VOICE`, `MODELS_DIR`,
-`STORAGE_DIR`, `TTS_DEVICE`. Frontend: `VITE_BACKEND_URL` (пусто → относительные
-пути). Полный план (VPS-провижининг, rate-limit, масштабирование, мобильное
-приложение) — в [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Configuration via backend environment variables: `CORS_ORIGINS` (empty for a
+single domain), `MAX_TEXT_LENGTH`, `CACHE_MAX_BYTES`, `DEFAULT_VOICE`,
+`MODELS_DIR`, `STORAGE_DIR`, `TTS_DEVICE`. Frontend: `VITE_BACKEND_URL` (empty →
+relative paths). The full plan (VPS provisioning, rate limiting, scaling, mobile
+app) — in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-## Архитектура (ключевые правила)
+## Architecture (key rules)
 
-- **Только CPU**: torch стоит CPU-сборкой; движок явно использует `device="cpu"`.
-- **Неблокирующий инференс**: синтез идёт через thread pool с семафором = 1;
-  `/api/health` отвечает мгновенно даже во время генерации.
-- **Единая функция разбиения на предложения** — только на backend
-  (`text_normalizer.split_sentences`), обслуживает и `/api/split`, и `/api/tts`,
-  поэтому границы предложений и char-смещения всегда согласованы с подсветкой.
-- **mp3 — единственный формат скачивания в MVP**; внутренний формат конвейера —
-  wav; конвертация в mp3 — последний шаг через ffmpeg.
-- **Кэш** готовых аудио по хэшу (текст+голос+движок+формат+версия+диапазон) с
-  LRU-очисткой; тайминги сегментов — в json рядом с mp3.
+- **CPU only**: torch is the CPU build; the engine explicitly uses `device="cpu"`.
+- **Non-blocking inference**: synthesis runs through a thread pool with a
+  semaphore = 1; `/api/health` responds instantly even during generation.
+- **Single sentence-splitting function** — backend only
+  (`text_normalizer.split_sentences`), serving both `/api/split` and `/api/tts`,
+  so sentence boundaries and char offsets are always consistent with highlighting.
+- **mp3 is the only download format in the MVP**; the pipeline's internal format
+  is wav; conversion to mp3 is the final step via ffmpeg.
+- **Cache** of ready audio keyed by a hash (text+voice+engine+format+version+range)
+  with LRU eviction; segment timings are in a json next to the mp3.
 
-## API (кратко)
+## API (brief)
 
 `GET /api/health` · `GET /api/voices` · `POST /api/split` ·
-`POST /api/tts` · `POST /api/tts/stream` (SSE с прогрессом) ·
-`GET /api/audio/{filename}`. Подробно — в [backend/README.md](backend/README.md).
+`POST /api/tts` · `POST /api/tts/stream` (SSE with progress) ·
+`GET /api/audio/{filename}`. Details — in [backend/README.md](backend/README.md).
 
-## Замечания
+## Notes
 
-- **Качество**: это открытые чекпоинты KazakhTTS2 2022 г. — тембр/уровень голосов
-  различаются; громкость выравнивается пиковой нормализацией. Улучшение качества
-  (другие модели, дереверберация, ONNX) — после MVP.
-- **CPU-инференс медленный** (секунды на предложение) — это нормально; UI
-  показывает прогресс.
-- **Числа и даты** лучше писать словами (подсказка есть в UI).
-- **План Б (Windows)**: если сборка ESPnet/вокодера не удаётся на Windows —
-  запускать backend в WSL2 (frontend остаётся на Windows, обращение по localhost).
-  На эталонной машине нативная установка на Windows прошла успешно.
+- **Quality**: these are the open 2022 KazakhTTS2 checkpoints — voice timbre/level
+  varies; loudness is evened out with peak normalization. Quality improvements
+  (other models, dereverberation, ONNX) — after the MVP.
+- **CPU inference is slow** (seconds per sentence) — this is normal; the UI shows
+  progress.
+- **Numbers and dates** are better written as words (there is a hint in the UI).
+- **Plan B (Windows)**: if building ESPnet/the vocoder fails on Windows — run the
+  backend in WSL2 (the frontend stays on Windows, talking over localhost). On the
+  reference machine the native Windows install succeeded.
 
-## Документы
+## Documents
 
-- [docs/PLAN.md](docs/PLAN.md) — план разработки и статусы этапов
-- [backend/README.md](backend/README.md) — детали backend
-- `Kazakh_TTS_App_Specification.md` — исходное техническое задание
+- [docs/PLAN.md](docs/PLAN.md) — development plan and stage statuses
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — server deployment and mobile app plan
+- [backend/README.md](backend/README.md) — backend details
+- `Kazakh_TTS_App_Specification.md` — original specification (in Russian)

@@ -8,9 +8,9 @@ interface Props {
   onPause: () => void
 }
 
-// Скрытый <audio>: управление только кастомными кнопками (PlayerControls),
-// стандартные controls не показываются. Ref пробрасывается наружу, чтобы
-// вызывать play/pause и перематывать (currentTime) из App.
+// Hidden <audio>: controlled only by the custom buttons (PlayerControls); the
+// native controls are not shown. The ref is forwarded out so App can call
+// play/pause and seek (currentTime).
 export const AudioPlayer = forwardRef<HTMLAudioElement, Props>(
   ({ src, onTimeUpdate, onEnded, onPlay, onPause }, ref) => (
     <audio

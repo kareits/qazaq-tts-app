@@ -1,15 +1,18 @@
-"""Оркестрация TTS: нормализация -> разбиение на предложения -> посегментный
-синтез -> склейка -> mp3, с кэшированием.
+"""TTS orchestration: normalization -> sentence splitting -> per-segment
+synthesis -> concatenation -> mp3, with caching.
 
-Здесь живёт единственный экземпляр TTS-движка (загружается один раз при старте
-приложения) и семафор, ограничивающий число параллельных синтезов до одного
-(на ноутбуке один CPU-синтез за раз). Тяжёлый инференс и конвертация вызываются
-только через thread pool (asyncio.to_thread), чтобы не блокировать event loop —
-в частности, /api/health отвечает мгновенно даже во время синтеза.
+This module holds the single TTS engine instance (loaded once at application
+startup) and a semaphore limiting concurrent syntheses to one (one CPU synthesis
+at a time on a laptop). Heavy inference and conversion are called only via a
+thread pool (asyncio.to_thread) so the event loop is never blocked — in
+particular, /api/health responds instantly even during synthesis.
 
-Разбиение на предложения выполняется ЕДИНОЙ функцией text_normalizer.split_sentences
-(та же, что обслуживает /api/split), поэтому границы предложений и char-смещения
-у /api/split и /api/tts всегда совпадают.
+Sentence splitting uses the SINGLE function text_normalizer.split_sentences (the
+same one that serves /api/split), so sentence boundaries and char offsets always
+match between /api/split and /api/tts.
+
+Note: user-facing validation messages (raised as ValueError and returned as API
+error details) stay in Russian, matching the Russian UI.
 """
 
 import asyncio
@@ -34,13 +37,13 @@ logger = logging.getLogger(__name__)
 
 ENGINE_NAME = "kazakhtts2"
 
-# Единственный экземпляр движка и семафор параллельных синтезов (= 1).
+# The single engine instance and the concurrent-synthesis semaphore (= 1).
 _engine: KazakhTTS2Engine | None = None
 _semaphore = asyncio.Semaphore(1)
 
 
 def init_engine() -> None:
-    """Загрузить TTS-движок. Вызывается один раз при старте (lifespan)."""
+    """Load the TTS engine. Called once at startup (lifespan)."""
     global _engine
     engine = KazakhTTS2Engine(
         MODELS_DIR, device=TTS_DEVICE, default_voice=DEFAULT_VOICE
@@ -66,7 +69,7 @@ def list_voices() -> list[dict]:
 
 
 def split(text: str) -> dict:
-    """Разбить текст на предложения (для /api/split) + предупреждение о языке."""
+    """Split text into sentences (for /api/split) + a language warning."""
     return {
         "sentences": text_normalizer.split_sentences(text),
         "warning": text_normalizer.kazakh_warning(text),
@@ -74,7 +77,7 @@ def split(text: str) -> dict:
 
 
 def _select_range(sentences: list[dict], sentence_range: dict | None) -> list[dict]:
-    """Выбрать поддиапазон предложений [from..to] (включительно) или все."""
+    """Select a sub-range of sentences [from..to] (inclusive), or all of them."""
     if sentence_range is None:
         return sentences
     lo = sentence_range["from"]
@@ -94,20 +97,20 @@ async def synthesize_stream(
     fmt: str = "mp3",
     sentence_range: dict | None = None,
 ):
-    """Асинхронный генератор синтеза с событиями прогресса.
+    """Async synthesis generator that yields progress events.
 
-    Отдаёт словари-события:
+    Yields event dicts:
       {"type": "progress", "stage": ..., "done": k, "total": n, "percent": p}
-      {"type": "done", "result": <meta для /api/tts>}
-    Прогресс честный: каждое событие 'synth' приходит после реального синтеза
-    очередного предложения. Валидационные ошибки поднимаются как ValueError.
+      {"type": "done", "result": <meta for /api/tts>}
+    Progress is honest: each 'synth' event arrives after the actual synthesis of
+    the next sentence. Validation errors are raised as ValueError.
     """
     if _engine is None:
         raise RuntimeError("TTS-модель не загружена")
     if voice not in {v["id"] for v in list_voices()}:
         raise ValueError(f"Неизвестный голос '{voice}'")
 
-    # Полная нормализация всего текста — для лимита длины и ключа кэша.
+    # Full normalization of the whole text — for the length limit and cache key.
     normalized_full = text_normalizer.normalize_text(text)
     if not normalized_full:
         raise ValueError("Текст пустой")
@@ -117,7 +120,7 @@ async def synthesize_stream(
             f"(получено {len(normalized_full)})"
         )
 
-    # ЕДИНАЯ функция разбиения (та же, что у /api/split).
+    # The SINGLE splitting function (same as /api/split).
     all_sentences = text_normalizer.split_sentences(text)
     if not all_sentences:
         raise ValueError("Не удалось выделить ни одного предложения")
@@ -130,10 +133,10 @@ async def synthesize_stream(
     )
     key = cache_service.make_key(normalized_full, voice, ENGINE_NAME, fmt, range_key)
 
-    # Кэш: если готовое аудио есть — не запускаем синтез.
+    # Cache: if ready-made audio exists, do not run synthesis.
     cached_meta = cache_service.get(key, fmt)
     if cached_meta is not None:
-        logger.info("Кэш-хит (voice=%s, range=%s)", voice, range_key)
+        logger.info("Cache hit (voice=%s, range=%s)", voice, range_key)
         yield {"type": "done", "result": {**cached_meta, "cached": True}}
         return
 
@@ -144,23 +147,24 @@ async def synthesize_stream(
     final_wav = TMP_DIR / f"{uuid.uuid4().hex}.wav"
 
     try:
-        # Один синтез за раз; шаги — через thread pool, чтобы не блокировать loop.
+        # One synthesis at a time; steps go through a thread pool so the loop
+        # is not blocked.
         async with _semaphore:
             logger.info(
-                "Синтез %d предложений (voice=%s, range=%s)...",
+                "Synthesizing %d sentences (voice=%s, range=%s)...",
                 total,
                 voice,
                 range_key,
             )
             for i, sent in enumerate(selected):
                 seg_wav = TMP_DIR / f"{uuid.uuid4().hex}.wav"
-                # Для синтеза схлопываем внутренние пробелы; смещения не трогаем.
+                # Collapse inner whitespace for synthesis; offsets untouched.
                 seg_text = text_normalizer.normalize_text(sent["text"])
                 await asyncio.to_thread(
                     _engine.synthesize, seg_text, voice, str(seg_wav)
                 )
                 tmp_wavs.append(str(seg_wav))
-                # Синтез сегментов занимает основную часть времени — 0..90%.
+                # Segment synthesis takes most of the time — 0..90%.
                 yield {
                     "type": "progress",
                     "stage": "synth",
@@ -169,7 +173,7 @@ async def synthesize_stream(
                     "percent": round((i + 1) / total * 90),
                 }
 
-            # Склейка с короткой тишиной между предложениями + тайминги.
+            # Concatenation with a short silence between sentences + timings.
             timings = await asyncio.to_thread(
                 audio_service.concat_segments,
                 tmp_wavs,
@@ -179,7 +183,7 @@ async def synthesize_stream(
             yield {"type": "progress", "stage": "concat", "done": total,
                    "total": total, "percent": 93}
 
-            # Нормализация громкости финального (склеенного) аудио.
+            # Loudness normalization of the final (concatenated) audio.
             await asyncio.to_thread(
                 audio_service.normalize_wav_peak, str(final_wav), AUDIO_TARGET_PEAK
             )
@@ -215,11 +219,11 @@ async def synthesize_stream(
             "duration_sec": duration_sec,
             "segments": segments,
         }
-        # Сохраняем метаданные рядом с mp3 + LRU-очистка.
+        # Store metadata next to the mp3 + run LRU eviction.
         cache_service.put(key, fmt, meta)
         yield {"type": "done", "result": meta}
     finally:
-        # Убираем все временные WAV (сегменты и склейку).
+        # Remove all temporary WAVs (segments and the concatenation).
         for p in tmp_wavs:
             try:
                 os.unlink(p)
@@ -234,8 +238,8 @@ async def synthesize(
     fmt: str = "mp3",
     sentence_range: dict | None = None,
 ) -> dict:
-    """Непотоковый синтез (для POST /api/tts): прогоняет генератор и возвращает
-    итоговый результат."""
+    """Non-streaming synthesis (for POST /api/tts): drains the generator and
+    returns the final result."""
     result: dict | None = None
     async for event in synthesize_stream(text, voice, fmt, sentence_range):
         if event["type"] == "done":

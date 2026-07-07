@@ -1,6 +1,6 @@
-// Национальный орнамент ою-өрнек (казахский стиль) — тонкий акцент.
-// Горизонтальный бордюр из повторяющегося мотива: ромб-тұмарша по центру и
-// пара завитков-«қошқар мүйіз» (бараньи рога) по бокам. Цвет — золото флага.
+// National oyu-ornek ornament (Kazakh style) — a subtle accent.
+// A horizontal border of a repeating motif: a tumarsha rhombus in the center and
+// a pair of "qoshqar muyiz" (ram's horns) scrolls on the sides. Color — flag gold.
 
 interface OrnamentProps {
   className?: string
@@ -40,7 +40,7 @@ export function Ornament({ className }: OrnamentProps) {
   )
 }
 
-// Знак бренда — солнце с лучами (мотив флага Казахстана), золото.
+// Brand mark — a sun with rays (Kazakh flag motif), gold.
 export function SunMark({ size = 30 }: { size?: number }) {
   const rays = Array.from({ length: 12 }, (_, i) => {
     const a = (i * 30 * Math.PI) / 180

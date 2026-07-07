@@ -20,8 +20,12 @@ import { AudioPlayer } from './components/AudioPlayer'
 import { PlayerControls } from './components/PlayerControls'
 import { DownloadButton } from './components/DownloadButton'
 import { Ornament, SunMark } from './components/Ornament'
+import { LanguageSwitcher } from './components/LanguageSwitcher'
+import { useI18n } from './i18n/I18nContext'
 
 function App() {
+  const { t } = useI18n()
+
   const [health, setHealth] = useState<Health | null>(null)
   const [voices, setVoices] = useState<Voice[]>([])
   const [voice, setVoice] = useState('female1')
@@ -43,13 +47,15 @@ function App() {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [currentTime, setCurrentTime] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
-  // Подсветка активна во время воспроизведения и на паузе; сбрасывается на
-  // Стоп и по окончании (ended).
+  // Playback speed (0.1–3.0, step 0.1). Persists across syntheses.
+  const [speed, setSpeed] = useState(1.0)
+  // Highlight is active during playback and while paused; cleared on Stop and
+  // when playback ends.
   const [highlightActive, setHighlightActive] = useState(false)
 
   const maxLength = health?.max_text_length ?? 1000
 
-  // Загрузка статуса и голосов при старте.
+  // Load status and voices on startup.
   useEffect(() => {
     getHealth()
       .then(setHealth)
@@ -57,11 +63,11 @@ function App() {
     getVoices()
       .then(setVoices)
       .catch(() => {
-        /* список голосов не критичен для отображения */
+        /* the voice list is not critical for rendering */
       })
   }, [])
 
-  // При изменении текста: сброс выделения/аудио + повторный /api/split с debounce.
+  // On text change: reset selection/audio + re-run /api/split with a debounce.
   useEffect(() => {
     setSelection(null)
     setAnchor(null)
@@ -91,7 +97,7 @@ function App() {
     return () => clearTimeout(id)
   }, [text])
 
-  // Текущее произносимое предложение по таймингам сегментов.
+  // Currently spoken sentence, derived from the segment timings.
   const playingIndex =
     highlightActive && result
       ? (result.segments.find(
@@ -101,7 +107,7 @@ function App() {
 
   const handleVoiceChange = (v: string) => {
     setVoice(v)
-    // Аудио было синтезировано другим голосом — сбрасываем.
+    // The audio was synthesized with another voice — reset it.
     setResult(null)
     setIsPlaying(false)
     setHighlightActive(false)
@@ -121,11 +127,11 @@ function App() {
       setSelection({ from: Math.min(anchor, index), to: Math.max(anchor, index) })
       return
     }
-    // Клик-перемотка: если есть аудио и у предложения есть сегмент — перематываем.
+    // Click-to-seek: if there is audio and the sentence has a segment, seek to it.
     const seg = result?.segments.find((s) => s.index === index)
     if (seg) seekTo(seg.start_sec)
 
-    // Выбор предложения (повторный клик по одиночному выбору — снять выделение).
+    // Sentence selection (clicking the single selected one again clears it).
     if (selection && selection.from === index && selection.to === index) {
       setSelection(null)
       setAnchor(null)
@@ -152,8 +158,23 @@ function App() {
       })
   }
 
-  // Управление плеером.
-  const handlePlay = () => audioRef.current?.play()
+  // Apply the speed to the audio when it changes and when new audio appears.
+  useEffect(() => {
+    const a = audioRef.current
+    if (a) {
+      a.defaultPlaybackRate = speed
+      a.playbackRate = speed
+    }
+  }, [speed, result])
+
+  // Player controls.
+  const handlePlay = () => {
+    const a = audioRef.current
+    if (a) {
+      a.playbackRate = speed
+      a.play()
+    }
+  }
   const handlePause = () => audioRef.current?.pause()
   const handleStop = () => {
     const a = audioRef.current
@@ -166,26 +187,30 @@ function App() {
   }
 
   const progressLabel = (p: SynthProgress): string => {
-    if (p.stage === 'synth') return `Синтез предложения ${p.done} из ${p.total}`
-    if (p.stage === 'concat') return 'Склейка сегментов'
-    return 'Конвертация в mp3'
+    if (p.stage === 'synth')
+      return t('progressSynth', { done: p.done, total: p.total })
+    if (p.stage === 'concat') return t('progressConcat')
+    return t('progressEncode')
   }
 
   const selectionLabel = !selection
-    ? 'Озвучить: весь текст'
+    ? t('selectionAll')
     : selection.from === selection.to
-      ? `Озвучить: предложение ${selection.from + 1}`
-      : `Озвучить: предложения ${selection.from + 1}–${selection.to + 1}`
+      ? t('selectionOne', { n: selection.from + 1 })
+      : t('selectionRange', { from: selection.from + 1, to: selection.to + 1 })
 
   return (
     <main className="app">
       <header className="app-header">
-        <div className="brand">
-          <SunMark size={34} />
-          <div>
-            <h1>Kazakh TTS</h1>
-            <p className="subtitle">Қазақ мәтінін дыбысқа айналдыру</p>
+        <div className="header-top">
+          <div className="brand">
+            <SunMark size={34} />
+            <div>
+              <h1>Kazakh TTS</h1>
+              <p className="subtitle">{t('appSubtitle')}</p>
+            </div>
           </div>
+          <LanguageSwitcher />
         </div>
         <Ornament className="ornament" />
       </header>
@@ -195,10 +220,12 @@ function App() {
           <span>
             backend: {health.status} · {health.device} ·{' '}
             {health.active_engine ?? '—'} ·{' '}
-            {health.model_loaded ? 'модель загружена' : 'модель не загружена'}
+            {health.model_loaded
+              ? t('statusModelLoaded')
+              : t('statusModelNotLoaded')}
           </span>
         ) : (
-          <span>подключение к backend…</span>
+          <span>{t('statusConnecting')}</span>
         )}
       </div>
 
@@ -211,13 +238,12 @@ function App() {
 
       <TextInput value={text} maxLength={maxLength} onChange={setText} />
 
-      {splitWarning && <div className="warning">{splitWarning}</div>}
+      {splitWarning && <div className="warning">{t('warningNotKazakh')}</div>}
 
       {sentences.length > 0 && (
         <>
           <div className="selection-hint">
-            {selectionLabel}. Клик — выбрать предложение, Shift+клик — диапазон,
-            повторный клик — снять. Во время воспроизведения клик перематывает.
+            {selectionLabel}. {t('selectionHint')}
           </div>
           <SentenceView
             sentences={sentences}
@@ -234,15 +260,15 @@ function App() {
           onClick={handleSynthesize}
           disabled={loading || !health?.model_loaded || text.trim().length === 0}
         >
-          {loading ? 'Генерация…' : 'Синтезировать'}
+          {loading ? t('generating') : t('synthesize')}
         </button>
-        {result?.cached && <span className="cached">из кэша</span>}
+        {result?.cached && <span className="cached">{t('cached')}</span>}
       </div>
 
       {loading && (
         <div className="synth-progress">
           <div className="synth-progress-head">
-            <span>{progress ? progressLabel(progress) : 'Подготовка…'}</span>
+            <span>{progress ? progressLabel(progress) : t('preparing')}</span>
             <span className="synth-percent">{progress?.percent ?? 0}%</span>
           </div>
           <div className="progress">
@@ -254,7 +280,11 @@ function App() {
         </div>
       )}
 
-      {error && <div className="error">Ошибка: {error}</div>}
+      {error && (
+        <div className="error">
+          {t('errorPrefix')}: {error}
+        </div>
+      )}
 
       {result && (
         <>
@@ -263,6 +293,8 @@ function App() {
             isPlaying={isPlaying}
             currentTime={currentTime}
             duration={result.duration_sec}
+            speed={speed}
+            onSpeedChange={setSpeed}
             onPlay={handlePlay}
             onPause={handlePause}
             onStop={handleStop}

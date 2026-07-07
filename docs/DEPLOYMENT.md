@@ -1,203 +1,209 @@
-# План: развёртывание на сервере + мобильное приложение (Google Play)
+# Plan: server deployment + mobile app (Google Play)
 
-Документ описывает переход от локального MVP к размещённому на сервере сервису и
-к Android-приложению в Google Play. Это план, а не реализация — переходить к
-этапам по подтверждению.
+This document describes the move from the local MVP to a server-hosted service and
+to an Android app on Google Play. It is a plan, not an implementation — move
+through the stages upon confirmation.
 
-## Контекст и ключевые ограничения
+## Context and key constraints
 
-- Движок **KazakhTTS2** тяжёлый: torch (CPU) + ESPnet + вокодер, ~1.5 ГБ весов
-  (5 голосов), venv ~3 ГБ. Инференс на CPU — **секунды на предложение**,
-  параллельные синтезы ограничены семафором = 1 на процесс.
-- Отсюда два следствия, определяющие всю архитектуру:
-  1. **Мобильное приложение не может считать модель на устройстве** → это тонкий
-     клиент к серверному API (синтез на сервере).
-  2. **Сервер CPU-затратный** → нужны очередь/лимиты, иначе публичный доступ
-     легко «положить» нагрузкой (а CPU-время стоит денег).
+- The **KazakhTTS2** engine is heavy: torch (CPU) + ESPnet + vocoder, ~1.5 GB of
+  weights (5 voices), venv ~3 GB. CPU inference — **seconds per sentence**,
+  concurrent syntheses limited by a semaphore = 1 per process.
+- Two consequences follow that shape the whole architecture:
+  1. **The mobile app cannot run the model on-device** → it is a thin client to
+     the server API (synthesis on the server).
+  2. **The server is CPU-intensive** → a queue/limits are needed, otherwise public
+     access can easily be overwhelmed (and CPU time costs money).
 
-## Лицензия и коммерческое использование (проверено)
+## License and commercial use (checked)
 
-**Итог: коммерческое использование разрешено при соблюдении атрибуции.**
+**Bottom line: commercial use is allowed, subject to attribution.**
 
-- Модели KazakhTTS2 — под **CC-BY-4.0** (файл `LICENSE.md` в IS2AI/Kazakh_TTS;
-  подтверждено GitHub API `SPDX: CC-BY-4.0` и текстом лицензии — стандартная,
-  без модификаций). CC-BY-4.0 **прямо разрешает коммерцию**; обязательство —
-  атрибуция.
-- В `README` добавлены: (а) этическое ограничение (не генерировать непристойный/
-  оскорбительный/дискриминационный контент), (б) требование атрибуции (название
-  статьи, автор, организация). Соблюсти оба несложно.
-- Датасет на HuggingFace — без явной лицензии, но корпус мы **не
-  распространяем** (используем только предобученные модели под CC-BY-4.0).
-- Зависимости — пермиссивные: ESPnet (Apache-2.0), parallel_wavegan (MIT),
-  PyTorch (BSD), FastAPI/uvicorn/pydantic (MIT/BSD). ffmpeg вызывается как
-  внешний бинарник (subprocess, без линковки) — GPL не распространяется на наш
-  код; для коммерции предпочесть LGPL-сборку ffmpeg или требовать системный.
+- The KazakhTTS2 models are under **CC-BY-4.0** (the `LICENSE.md` file in
+  IS2AI/Kazakh_TTS; confirmed by the GitHub API `SPDX: CC-BY-4.0` and the license
+  text — standard, unmodified). CC-BY-4.0 **explicitly permits commercial use**;
+  the obligation is attribution.
+- The `README` adds: (a) an ethical restriction (do not generate obscene/offensive/
+  discriminatory content), (b) an attribution requirement (paper title, author,
+  organization). Both are easy to comply with.
+- The dataset on HuggingFace has no explicit license, but we do **not distribute**
+  the corpus (we use only the pretrained models under CC-BY-4.0).
+- Dependencies are permissive: ESPnet (Apache-2.0), parallel_wavegan (MIT), PyTorch
+  (BSD), FastAPI/uvicorn/pydantic (MIT/BSD). ffmpeg is called as an external binary
+  (subprocess, no linking) — GPL does not propagate to our code; for commercial use
+  prefer an LGPL ffmpeg build or require the system one.
 
-**Обязательные действия для коммерческого релиза:**
-1. Атрибуция в приложении (экран «О программе»/титры), в листинге магазина и в
-   репозитории: процитировать статьи KazakhTTS2 (Mussakhojayeva et al., LREC
-   2022, arXiv:2201.05771) и KazakhTTS (Interspeech 2021), автора и ISSAI,
+**Required actions for a commercial release:**
+1. Attribution in the app (an "About" screen/credits), in the store listing, and in
+   the repository: cite the KazakhTTS2 papers (Mussakhojayeva et al., LREC 2022,
+   arXiv:2201.05771) and KazakhTTS (Interspeech 2021), the author, and ISSAI,
    Nazarbayev University.
-2. Указать, что модель используется без изменений (или отметить изменения — так
-   требует CC-BY).
-3. Внести этический пункт в Terms of Service приложения.
+2. State that the model is used unmodified (or note the changes — CC-BY requires it).
+3. Add the ethical clause to the app's Terms of Service.
 
-**Остаточные риски (снять до запуска):**
-- Неоднозначность «чистая CC-BY vs добавленное этическое ограничение» — получить
-  **письменное подтверждение от ISSAI** (issai@nu.edu.kz / авторы статьи) на
-  коммерческое использование и согласовать формулировку атрибуции.
-- Юридическая проверка перед коммерческим запуском (я не являюсь юристом; выше —
-  анализ фактов, не юридическая консультация).
+**Residual risks (resolve before launch):**
+- The ambiguity "pure CC-BY vs the added ethical restriction" — obtain **written
+  confirmation from ISSAI** (issai@nu.edu.kz / the paper authors) for commercial
+  use and agree on the attribution wording.
+- Legal review before a commercial launch (I am not a lawyer; the above is a
+  factual analysis, not legal advice).
 
-## ⚠️ Прочие вопросы, которые надо закрыть ДО публикации
+## ⚠️ Other items to close BEFORE publishing
 
-1. **Лицензия KazakhTTS2** — проверено выше (CC-BY-4.0, коммерция разрешена с
-   атрибуцией; желательно письменное подтверждение ISSAI).
-2. **Приватность**: у локального MVP было преимущество «текст не покидает
-   устройство». В размещённой/мобильной версии **текст уходит на сервер** —
-   нужны политика конфиденциальности и раскрытие в Play Data Safety.
-3. **Злоупотребление/стоимость**: без rate-limit/капчи/ключа публичный синтез
-   можно использовать для DoS и «сжечь» CPU. Нужны лимиты.
+1. **KazakhTTS2 license** — checked above (CC-BY-4.0, commercial allowed with
+   attribution; written ISSAI confirmation is desirable).
+2. **Privacy**: the local MVP had the advantage "text never leaves the device". In
+   the hosted/mobile version **text goes to the server** — a privacy policy and
+   disclosure in Play Data Safety are needed.
+3. **Abuse/cost**: without rate limiting/captcha/keys, public synthesis can be used
+   for DoS and "burn" CPU. Limits are needed.
+
+## Recorded decisions (from the user)
+
+- **Product: commercial** → the license check is priority #1 (done above; written
+  ISSAI confirmation is desirable).
+- **Mobile: Capacitor** (see Part B).
+- **Hosting: recommend** → recommendation: own VPS (see A0).
 
 ---
 
-## Часть A. Развёртывание на сервере
+## Part A. Server deployment
 
-### A0. Целевая площадка и размер
-- Рекомендация: **свой VPS** (Hetzner/DigitalOcean/Selectel) — дешевле всего для
-  CPU-нагрузки. GPU не нужен.
-- Минимум: 2–4 vCPU, 4–8 ГБ RAM (модель ~0.5–1 ГБ в памяти + torch), 15+ ГБ SSD
-  (модели ~2 ГБ + venv + кэш). Больше vCPU = быстрее один синтез (torch-потоки) и
-  больше воркеров.
-- Альтернатива: Fly.io / Cloud Run — но следить за «холодным стартом» (загрузка
-  модели ~5 с) и держать инстанс «тёплым».
+### A0. Target platform and sizing
+- Recommendation: **own VPS** (Hetzner/DigitalOcean/Selectel) — cheapest for CPU
+  load. No GPU needed.
+- Minimum: 2–4 vCPU, 4–8 GB RAM (model ~0.5–1 GB in memory + torch), 15+ GB SSD
+  (models ~2 GB + venv + cache). More vCPU = faster single synthesis (torch threads)
+  and more workers.
+- Alternative: Fly.io / Cloud Run — but watch out for the "cold start" (model load
+  ~5 s) and keep the instance "warm".
 
-### A1. Контейнеризация (Docker)
-- **Backend Dockerfile** (`python:3.11-slim`): установить ffmpeg, системные
-  зависимости, `pip install -r requirements.txt`, отдельно
-  `pip install --no-build-isolation parallel_wavegan==0.6.1`, скопировать `app/`.
-  Модели **не** зашивать в образ (1.5 ГБ) — монтировать томом или качать при
-  первом старте скриптом `scripts/download_kazakhtts2.py` в volume.
-- **Frontend**: multi-stage сборка (`node` → `npm run build` → статические файлы
-  `dist/`), отдаётся nginx/Caddy.
-- **docker-compose**: сервисы `backend` (uvicorn/gunicorn), `proxy` (Caddy/nginx),
-  общий volume под `storage/cache` и `models`.
+### A1. Containerization (Docker)
+- **Backend Dockerfile** (`python:3.11-slim`): install ffmpeg, system dependencies,
+  `pip install -r requirements.txt`, separately
+  `pip install --no-build-isolation parallel_wavegan==0.6.1`, copy `app/`. Do **not**
+  bake the models into the image (1.5 GB) — mount a volume or download on first
+  start with `scripts/download_kazakhtts2.py` into the volume.
+- **Frontend**: a multi-stage build (`node` → `npm run build` → static `dist/`
+  files), served by nginx/Caddy.
+- **docker-compose**: services `backend` (uvicorn/gunicorn), `proxy` (Caddy/nginx),
+  a shared volume for `storage/cache` and `models`.
 
-### A2. Reverse-proxy + HTTPS
-- **Caddy** (авто-HTTPS Let's Encrypt) или nginx + certbot.
-- Схема одного домена (без CORS): `/` → статика фронтенда, `/api/*` → backend.
-  Тогда фронтенд и API — один origin, CORS не нужен.
-- SSE (`/api/tts/stream`) через прокси: отключить буферизацию
-  (`X-Accel-Buffering: no` уже отдаётся; для nginx — `proxy_buffering off`).
+### A2. Reverse proxy + HTTPS
+- **Caddy** (auto-HTTPS via Let's Encrypt) or nginx + certbot.
+- Single-domain layout (no CORS): `/` → frontend static, `/api/*` → backend. Then
+  the frontend and the API are one origin, no CORS needed.
+- SSE (`/api/tts/stream`) through the proxy: disable buffering (`X-Accel-Buffering:
+  no` is already returned; for nginx — `proxy_buffering off`).
 
-### A3. Конфигурация под прод (изменения в коде)
-- Вынести настройки в **переменные окружения** (сейчас часть захардкожена):
-  - `CORS_ORIGINS` (прод-домен вместо localhost),
-  - `MAX_TEXT_LENGTH`, `CACHE_MAX_BYTES`, путь кэша,
-  - число воркеров, устройство (оставить cpu).
-- Заменить хардкод `http://127.0.0.1:8000` во фронтенде на конфигурируемый
-  `VITE_BACKEND_URL` (или относительный путь при одном домене).
+### A3. Production configuration (code changes)
+- Move settings into **environment variables** (some are currently hardcoded):
+  - `CORS_ORIGINS` (prod domain instead of localhost),
+  - `MAX_TEXT_LENGTH`, `CACHE_MAX_BYTES`, cache path,
+  - number of workers, device (keep cpu).
+- Replace the hardcoded `http://127.0.0.1:8000` on the frontend with a configurable
+  `VITE_BACKEND_URL` (or a relative path for a single domain).
 
-### A4. Модель процессов и параллелизм
-- Uvicorn/Gunicorn c N воркерами; **каждый воркер грузит модель** (память ×N).
-  Семафор=1 на процесс → одновременно N синтезов = N воркеров.
-- Старт: 1–2 воркера за прокси. Рост нагрузки → **очередь задач**
-  (Celery/RQ + Redis) с пулом воркеров: API кладёт задачу и отдаёт прогресс через
-  SSE/поллинг (наш посегментный прогресс уже готов), синтез идёт в воркере.
-- Кэш общий для воркеров: один volume (или объектное хранилище S3 при
-  горизонтальном масштабировании). LRU уже есть.
+### A4. Process model and concurrency
+- Uvicorn/Gunicorn with N workers; **each worker loads the model** (memory ×N). A
+  semaphore=1 per process → N concurrent syntheses = N workers.
+- Start: 1–2 workers behind the proxy. Growing load → a **task queue** (Celery/RQ +
+  Redis) with a worker pool: the API enqueues a task and streams progress via
+  SSE/polling (our per-segment progress is already there), synthesis runs in a
+  worker.
+- Cache shared across workers: one volume (or S3 object storage for horizontal
+  scaling). LRU is already there.
 
-### A5. Безопасность и защита от злоупотреблений
-- **Rate limiting** (nginx `limit_req` / Caddy / slowapi), таймауты, лимит размера
-  запроса (длина текста уже ограничена).
-- Опционально: API-ключ/капча/квоты по IP для публичного доступа.
-- Логи в stdout (уже через `logging`), агрегация; без хранения PII.
+### A5. Security and abuse protection
+- **Rate limiting** (nginx `limit_req` / Caddy / slowapi), timeouts, request size
+  limit (text length is already capped).
+- Optional: API key/captcha/per-IP quotas for public access.
+- Logs to stdout (already via `logging`), aggregation; no PII stored.
 
-### A6. Наблюдаемость и CI/CD
-- Мониторинг по `/api/health`; опц. метрики (Prometheus), ошибки (Sentry).
-- **GitHub Actions**: линт/тесты → сборка образов → пуш в registry → деплой
-  (`compose pull && up -d`) или в PaaS.
+### A6. Observability and CI/CD
+- Monitoring via `/api/health`; optional metrics (Prometheus), errors (Sentry).
+- **GitHub Actions**: lint/tests → build images → push to registry → deploy
+  (`compose pull && up -d`) or to a PaaS.
 
-### Часть A — этапы
-- ✅ **A-1. Docker-артефакты** (собраны и проверены end-to-end): `backend/Dockerfile`
-  (python:3.11-slim + ffmpeg + **build-essential** для сборки C-расширения
-  `pyworld` на Linux + deps + parallel_wavegan), `frontend/Dockerfile`
-  (Vite build → Caddy) + `frontend/Caddyfile` (статика + reverse-proxy `/api`,
-  SSE без буферизации `flush_interval -1`), `docker-compose.yml` (один домен,
-  volumes `models`/`storage`), `.dockerignore`, `.env.example`.
-  Проверено локально: `docker compose up -d` → `http://localhost` отдаёт
-  фронтенд, `/api/*` проксируется на backend (модель загружена, 5 голосов),
-  синтез и SSE-прогресс проходят через Caddy. Модели заливаются в volume
-  скриптом `download_kazakhtts2.py` (или копированием с хоста).
-- ✅ **A-2. Env-конфиг**: backend читает `CORS_ORIGINS`, `MAX_TEXT_LENGTH`,
+### Part A — stages
+- ✅ **A-1. Docker artifacts** (built and verified end-to-end): `backend/Dockerfile`
+  (python:3.11-slim + ffmpeg + **build-essential** to build the `pyworld` C
+  extension on Linux + deps + parallel_wavegan), `frontend/Dockerfile` (Vite build
+  → Caddy) + `frontend/Caddyfile` (static + reverse-proxy `/api`, SSE without
+  buffering via `flush_interval -1`), `docker-compose.yml` (single domain, `models`/
+  `storage` volumes), `.dockerignore`, `.env.example`. Verified locally:
+  `docker compose up -d` → `http://localhost` serves the frontend, `/api/*` is
+  proxied to the backend (model loaded, 5 voices), synthesis and SSE progress go
+  through Caddy. Models are loaded into the volume by `download_kazakhtts2.py` (or
+  by copying from the host).
+- ✅ **A-2. Env config**: the backend reads `CORS_ORIGINS`, `MAX_TEXT_LENGTH`,
   `CACHE_MAX_BYTES`, `MODELS_DIR`, `STORAGE_DIR`, `TTS_DEVICE`, `DEFAULT_VOICE`,
-  `AUDIO_TARGET_PEAK`, `SEGMENT_SILENCE_SEC`, `MODEL_VERSION` из окружения
-  (дефолты = локальная разработка). Frontend — `VITE_BACKEND_URL` (пусто →
-  относительные пути). Рантайм-проверка: локальный dev работает без регрессий.
-- ▶️ A-3. VPS + домен + `docker compose up` + HTTPS; e2e-проверка (нужен сервер).
-- A-4. Rate-limit, персистентный кэш-volume, мониторинг, CI/CD.
-- A-5. (при росте) очередь Celery/RQ + Redis.
+  `AUDIO_TARGET_PEAK`, `SEGMENT_SILENCE_SEC`, `MODEL_VERSION` from the environment
+  (defaults = local development). Frontend — `VITE_BACKEND_URL` (empty → relative
+  paths). Runtime check: local dev works without regressions.
+- ▶️ A-3. VPS + domain + `docker compose up` + HTTPS; e2e check (needs a server).
+- A-4. Rate limiting, a persistent cache volume, monitoring, CI/CD.
+- A-5. (as load grows) a Celery/RQ + Redis queue.
 
 ---
 
-## Часть B. Мобильное приложение (Google Play)
+## Part B. Mobile app (Google Play)
 
-### B0. Архитектурное решение
-Тонкий клиент к серверному API (синтез на сервере из части A). On-device —
-только как далёкая перспектива (см. B5).
+### B0. Architectural decision
+A thin client to the server API (synthesis on the server from Part A). On-device is
+only a distant prospect (see B5).
 
-### B1. Выбор технологии (развилка)
-- **Capacitor (рекомендуется)** — оборачивает текущее React-приложение в нативную
-  оболочку, переиспользует весь код фронтенда, добавляет нативное: аудио,
-  скачивание/шеринг файла, сплэш/иконку, обработку офлайна, пуши. Оптимальный
-  баланс усилий и качества.
-- **TWA (Bubblewrap)** — самый быстрый: публикует размещённый PWA как Android-app.
-  Нужны HTTPS-сайт, PWA-manifest/service worker, Digital Asset Links. Минимум
-  кода, UX = веб.
-- **React Native / нативный Kotlin** — избыточно для тонкого клиента.
+### B1. Technology choice — **Capacitor selected**
+- **Capacitor (selected)** — wraps the current React app in a native shell, reuses
+  all frontend code, adds native features: audio, file download/share, splash/icon,
+  offline handling, push. The best balance of effort and quality.
+- **TWA (Bubblewrap)** — the fastest: publishes the hosted PWA as an Android app.
+  Needs an HTTPS site, a PWA manifest/service worker, Digital Asset Links. Minimal
+  code, UX = web.
+- **React Native / native Kotlin** — overkill for a thin client.
 
-### B2. Доработки фронтенда под мобильный
-- Конфигурируемый API base URL (прод-сервер).
-- Скачивание mp3 → нативно (Capacitor Filesystem/Share) вместо `<a download>`.
-- Аудио: HTML5 `<audio>` работает в webview; при желании — нативный плеер/медиа-
-  сессия с фоновым воспроизведением.
-- Проверить адаптивную вёрстку на телефоне (сейчас в целом отзывчивая), состояния
-  офлайна и ошибок, ретраи.
-- Иконка/сплэш в казахском стиле (переиспользовать солнце + орнамент).
+### B2. Frontend changes for mobile
+- Configurable API base URL (prod server).
+- mp3 download → native (Capacitor Filesystem/Share) instead of `<a download>`.
+- Audio: the HTML5 `<audio>` works in the webview; optionally a native player/media
+  session with background playback.
+- Verify responsive layout on a phone (currently fairly responsive), offline and
+  error states, retries.
+- Icon/splash in the Kazakh style (reuse the sun + ornament).
 
-### B3. Требования Google Play
-- Аккаунт Play Console ($25 разово), Play App Signing, package id, версии.
-- **Политика конфиденциальности** (обязательна) — раскрыть, что текст
-  отправляется на сервер для синтеза; форма **Data Safety**.
-- Анкета возрастного рейтинга; target API level; листинг (иконка 512, фичер-
-  графика, скриншоты, описания на KZ/RU/EN).
+### B3. Google Play requirements
+- A Play Console account ($25 one-time), Play App Signing, package id, versions.
+- A **privacy policy** (mandatory) — disclose that text is sent to the server for
+  synthesis; the **Data Safety** form.
+- Content rating questionnaire; target API level; the listing (512 icon, feature
+  graphic, screenshots, descriptions in KZ/RU/EN).
 
-### B4. Сборка и релиз (для Capacitor)
-`npm run build` → `npx cap sync android` → Android Studio → подписанный **AAB** →
+### B4. Build and release (for Capacitor)
+`npm run build` → `npx cap sync android` → Android Studio → a signed **AAB** →
 Play Console: internal testing → closed testing → production.
 
-### B5. On-device в будущем (после MVP, опционально)
-Если приватность станет жёстким требованием — конвертация акустической модели и
-вокодера в **ONNX/TFLite**, бандл одного голоса (~120 МБ), инференс на устройстве.
-Это отдельный крупный R&D (совпадает с post-MVP пунктом ТЗ про ONNX).
+### B5. On-device in the future (post-MVP, optional)
+If privacy becomes a hard requirement — convert the acoustic model and the vocoder
+to **ONNX/TFLite**, bundle one voice (~120 MB), inference on the device. This is a
+separate large R&D effort (matches the post-MVP ONNX item of the spec).
 
-### Часть B — этапы
-- B-1. Настроить конфигурируемый API URL + мобильную вёрстку/состояния.
-- B-2. Обернуть в Capacitor, добавить нативные аудио/скачивание/иконку.
-- B-3. Политика конфиденциальности + Data Safety + листинг.
+### Part B — stages
+- B-1. Set up a configurable API URL + mobile layout/states.
+- B-2. Wrap in Capacitor, add native audio/download/icon.
+- B-3. Privacy policy + Data Safety + listing.
 - B-4. Internal testing → closed → production.
 
 ---
 
-## Общий порядок (рекомендация)
-1. **Сначала сервер** (часть A) — мобильному клиенту нужен рабочий публичный API.
-2. Закрыть критические вопросы: **лицензия модели**, приватность, лимиты.
-3. Затем **мобильный клиент** (часть B) поверх готового API.
-4. При росте нагрузки — очередь задач; при требовании приватности — on-device R&D.
+## Overall order (recommendation)
+1. **Server first** (Part A) — the mobile client needs a working public API.
+2. Close the critical items: **model license**, privacy, limits.
+3. Then the **mobile client** (Part B) on top of the ready API.
+4. As load grows — a task queue; if privacy is required — on-device R&D.
 
-## Решения, которые нужны от тебя
-- Площадка и бюджет; есть ли домен/HTTPS?
-- **Коммерческий или бесплатный** продукт? (влияет на лицензию, монетизацию,
-  приватность).
-- Мобильный подход: **Capacitor** (рекомендую) / TWA (быстрее всего) / нативный?
-- Ожидаемое число одновременных пользователей? (определяет воркеры/очередь).
+## Remaining decisions
+- Platform and budget; is there a domain/HTTPS?
+- Expected number of concurrent users? (drives workers/queue.)
+
+(Answered: product is commercial; mobile approach is Capacitor; hosting — own VPS
+recommended.)

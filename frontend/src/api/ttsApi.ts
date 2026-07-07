@@ -1,9 +1,9 @@
-// Клиент backend API.
+// Backend API client.
 //
-// Базовый URL берётся из VITE_BACKEND_URL (задаётся при сборке):
-//  - локальная разработка: http://127.0.0.1:8000 (дефолт ниже);
-//  - прод за одним доменом: VITE_BACKEND_URL="" → относительные пути (/api/...),
-//    которые reverse-proxy направляет на backend.
+// The base URL comes from VITE_BACKEND_URL (set at build time):
+//  - local development: http://127.0.0.1:8000 (default below);
+//  - production behind a single domain: VITE_BACKEND_URL="" → relative paths
+//    (/api/...) that the reverse proxy routes to the backend.
 export const BACKEND_URL =
   import.meta.env.VITE_BACKEND_URL ?? 'http://127.0.0.1:8000'
 
@@ -108,8 +108,8 @@ export interface SynthProgress {
   percent: number
 }
 
-// Потоковый синтез (Server-Sent Events): вызывает onProgress по мере готовности
-// предложений и возвращает итоговый результат.
+// Streaming synthesis (Server-Sent Events): calls onProgress as sentences become
+// ready and returns the final result.
 export async function synthesizeStream(
   text: string,
   voice: string,
@@ -135,7 +135,7 @@ export async function synthesizeStream(
     const { done, value } = await reader.read()
     if (done) break
     buffer += decoder.decode(value, { stream: true })
-    // SSE-события разделяются пустой строкой.
+    // SSE events are separated by a blank line.
     const frames = buffer.split('\n\n')
     buffer = frames.pop() ?? ''
     for (const frame of frames) {

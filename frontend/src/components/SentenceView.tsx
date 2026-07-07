@@ -1,4 +1,5 @@
 import type { Sentence, SentenceRange } from '../api/ttsApi'
+import { useI18n } from '../i18n/I18nContext'
 
 interface Props {
   sentences: Sentence[]
@@ -7,15 +8,16 @@ interface Props {
   onSentenceClick: (index: number, shiftKey: boolean) => void
 }
 
-// Отображение текста как последовательности кликабельных предложений.
-// Клик — выбор/перемотка, Shift-клик — расширение диапазона. Подсветка:
-// текущее произносимое предложение (playing) и выбранный диапазон (selected).
+// Renders text as a sequence of clickable sentences.
+// Click — select/seek, Shift-click — extend the range. Highlighting:
+// the currently spoken sentence (playing) and the selected range (selected).
 export function SentenceView({
   sentences,
   selection,
   playingIndex,
   onSentenceClick,
 }: Props) {
+  const { t } = useI18n()
   if (sentences.length === 0) return null
 
   return (
@@ -36,7 +38,7 @@ export function SentenceView({
             <span
               className={className}
               onClick={(e) => onSentenceClick(s.index, e.shiftKey)}
-              title={`Предложение ${s.index + 1}`}
+              title={t('sentenceTitle', { n: s.index + 1 })}
             >
               {s.text}
             </span>{' '}

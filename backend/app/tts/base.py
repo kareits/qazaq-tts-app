@@ -1,28 +1,28 @@
-"""Базовый интерфейс TTS-движка.
+"""Base TTS engine interface.
 
-Движки изолированы от API-слоя: обработчики FastAPI работают только через этот
-интерфейс, ничего не зная о ESPnet/вокодере.
+Engines are isolated from the API layer: FastAPI handlers work only through this
+interface and know nothing about ESPnet/the vocoder.
 """
 
 from abc import ABC, abstractmethod
 
 
 class BaseTTSEngine(ABC):
-    """Абстрактный TTS-движок."""
+    """Abstract TTS engine."""
 
     @abstractmethod
     def load(self) -> None:
-        """Загрузить модель(и) в память. Вызывается один раз при старте
-        приложения (lifespan), не на каждый запрос."""
+        """Load the model(s) into memory. Called once at application startup
+        (lifespan), not on every request."""
 
     @abstractmethod
     def synthesize(self, text: str, voice: str, output_wav_path: str) -> str:
-        """Синтезировать речь из текста и сохранить в WAV по указанному пути.
+        """Synthesize speech from text and save it as WAV at the given path.
 
-        Блокирующая CPU-операция — вызывать только через thread pool, а не
-        напрямую в асинхронном обработчике. Возвращает путь к созданному WAV.
+        Blocking CPU operation — call it only via a thread pool, not directly in
+        an async handler. Returns the path to the created WAV.
         """
 
     @abstractmethod
     def available_voices(self) -> list[dict]:
-        """Список доступных голосов: [{id, name, language, engine}, ...]."""
+        """List of available voices: [{id, name, language, engine}, ...]."""

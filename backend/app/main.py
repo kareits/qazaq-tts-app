@@ -1,4 +1,4 @@
-"""Точка входа FastAPI: приложение, lifespan, CORS."""
+"""FastAPI entry point: application, lifespan, CORS."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -18,25 +18,23 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if is_ffmpeg_available():
-        logger.info("ffmpeg найден в PATH")
+        logger.info("ffmpeg found on PATH")
     else:
-        logger.error(
-            "ffmpeg не найден в PATH! Конвертация wav -> mp3 работать не будет."
-        )
+        logger.error("ffmpeg not found on PATH! wav -> mp3 conversion will not work.")
 
-    # Модель KazakhTTS2 грузится один раз при старте (не на каждый запрос).
-    # Если checkpoint'ы отсутствуют — не валим приложение, /api/health честно
-    # покажет model_loaded=false, а /api/tts вернёт 503.
+    # The KazakhTTS2 model is loaded once at startup (not per request). If the
+    # checkpoints are missing, do not crash the app: /api/health honestly reports
+    # model_loaded=false and /api/tts returns 503.
     try:
         tts_service.init_engine()
     except Exception:  # noqa: BLE001
         logger.exception(
-            "Не удалось загрузить TTS-движок KazakhTTS2 — /api/tts недоступен"
+            "Failed to load the KazakhTTS2 engine — /api/tts is unavailable"
         )
 
-    logger.info("Backend запущен (Этап 4: KazakhTTS2)")
+    logger.info("Backend started (KazakhTTS2)")
     yield
-    logger.info("Backend останавливается")
+    logger.info("Backend shutting down")
 
 
 app = FastAPI(title="Kazakh TTS App", lifespan=lifespan)
