@@ -148,9 +148,22 @@ through the stages upon confirmation.
 - ▶️ A-3. VPS + domain + `docker compose up` + HTTPS; e2e check (needs a server).
 - ✅ **CI/CD** (GitHub Actions): `ci.yml` (backend pytest + frontend lint/build on
   push/PR) and `docker-publish.yml` (build & push images to GHCR on `v*` tags /
-  manual dispatch). Verified locally: pytest 17 passed, frontend lint & build pass.
-- A-4. Rate limiting, a persistent cache volume, monitoring.
-- A-5. (as load grows) a Celery/RQ + Redis queue.
+  manual dispatch).
+- ✅ **A-4. Rate limiting + monitoring**:
+  - Rate limiting via slowapi (per client IP): `/api/tts` and `/api/tts/stream`
+    limited by `TTS_RATE_LIMIT` (default 10/min), a generous global
+    `DEFAULT_RATE_LIMIT` (240/min) for the rest; `429` on excess. The real client
+    IP comes from `X-Forwarded-For` (uvicorn `--forwarded-allow-ips=*`, safe as the
+    backend is internal-only). In-memory store — fine for one uvicorn worker; use
+    Redis for multiple.
+  - Prometheus metrics at `/metrics` (internal — not proxied by Caddy under
+    `/api`, so not publicly exposed); scrape from the internal network.
+  - Docker `HEALTHCHECK` on the backend (`/api/health`); `web` waits for
+    `service_healthy`. Persistent cache/models volumes already in compose.
+  - Verified: 10×200 then 429; `/metrics` served internally but not via Caddy;
+    backend reports `healthy`. Tests: 19 passed (added rate-limit/metrics test).
+- A-5. (as load grows) a Celery/RQ + Redis queue (Redis also enables shared
+  rate-limit state across workers).
 
 ---
 

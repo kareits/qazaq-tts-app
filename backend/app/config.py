@@ -79,3 +79,14 @@ CORS_ORIGINS = _env_list(
     "CORS_ORIGINS",
     ["http://localhost:5173", "http://127.0.0.1:5173"],
 )
+
+# Rate limiting (per client IP) to protect the CPU from abuse. Applied by slowapi.
+# RATE_LIMIT_ENABLED can be set to "0" to disable (e.g., in tests). TTS_RATE_LIMIT
+# guards the expensive synthesis endpoints; DEFAULT_RATE_LIMIT is a generous
+# global safety net for the rest.
+RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "1") != "0"
+DEFAULT_RATE_LIMIT = os.getenv("DEFAULT_RATE_LIMIT", "240/minute")
+TTS_RATE_LIMIT = os.getenv("TTS_RATE_LIMIT", "10/minute")
+
+# Expose Prometheus metrics at /metrics (internal — not proxied by Caddy).
+METRICS_ENABLED = os.getenv("METRICS_ENABLED", "1") != "0"

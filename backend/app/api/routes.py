@@ -3,7 +3,7 @@
 import json
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 
 from app.api.schemas import (
@@ -14,7 +14,8 @@ from app.api.schemas import (
     TTSResponse,
     VoicesResponse,
 )
-from app.config import CACHE_DIR, MAX_TEXT_LENGTH
+from app.config import CACHE_DIR, MAX_TEXT_LENGTH, TTS_RATE_LIMIT
+from app.rate_limit import limiter
 from app.services import tts_service
 
 logger = logging.getLogger(__name__)
@@ -52,8 +53,19 @@ async def split(request: SplitRequest) -> SplitResponse:
     return SplitResponse(**tts_service.split(request.text))
 
 
+def _sentence_range_dict(body: TTSRequest) -> dict | None:
+    return (
+        {"from": body.sentence_range.from_, "to": body.sentence_range.to}
+        if body.sentence_range is not None
+        else None
+    )
+
+
+# `request: Request` is required by slowapi to read the client IP. The rate limit
+# guards the CPU-expensive synthesis from abuse (per client IP).
 @router.post("/tts", response_model=TTSResponse)
-async def tts(request: TTSRequest) -> TTSResponse:
+@limiter.limit(TTS_RATE_LIMIT)
+async def tts(request: Request, body: TTSRequest) -> TTSResponse:
     """Synthesize audio from text (or a sentence range). Inference is
     non-blocking (thread pool + semaphore=1), so /api/health responds even during
     synthesis."""
@@ -61,13 +73,13 @@ async def tts(request: TTSRequest) -> TTSResponse:
     if not tts_service.is_model_loaded():
         raise HTTPException(status_code=503, detail="TTS-модель не загружена")
 
-    sentence_range = _sentence_range_dict(request)
+    sentence_range = _sentence_range_dict(body)
 
     try:
         result = await tts_service.synthesize(
-            text=request.text,
-            voice=request.voice,
-            fmt=request.format,
+            text=body.text,
+            voice=body.voice,
+            fmt=body.format,
             sentence_range=sentence_range,
         )
     except ValueError as exc:
@@ -80,16 +92,9 @@ async def tts(request: TTSRequest) -> TTSResponse:
     return TTSResponse(**result)
 
 
-def _sentence_range_dict(request: TTSRequest) -> dict | None:
-    return (
-        {"from": request.sentence_range.from_, "to": request.sentence_range.to}
-        if request.sentence_range is not None
-        else None
-    )
-
-
 @router.post("/tts/stream")
-async def tts_stream(request: TTSRequest) -> StreamingResponse:
+@limiter.limit(TTS_RATE_LIMIT)
+async def tts_stream(request: Request, body: TTSRequest) -> StreamingResponse:
     """Streaming synthesis with progress (Server-Sent Events). Emits `data: {...}`
     events — progress as each sentence becomes ready plus the final result.
     Inference is non-blocking; /api/health responds even during synthesis."""
@@ -97,14 +102,14 @@ async def tts_stream(request: TTSRequest) -> StreamingResponse:
     if not tts_service.is_model_loaded():
         raise HTTPException(status_code=503, detail="TTS-модель не загружена")
 
-    sentence_range = _sentence_range_dict(request)
+    sentence_range = _sentence_range_dict(body)
 
     async def event_gen():
         try:
             async for event in tts_service.synthesize_stream(
-                text=request.text,
-                voice=request.voice,
-                fmt=request.format,
+                text=body.text,
+                voice=body.voice,
+                fmt=body.format,
                 sentence_range=sentence_range,
             ):
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"

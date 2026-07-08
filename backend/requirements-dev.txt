@@ -1,3 +1,5 @@
 # Development/test dependencies (not needed at runtime).
 # Install: pip install -r requirements-dev.txt ; run: pytest
 pytest==8.4.2
+# httpx is required by FastAPI's TestClient (integration tests).
+httpx==0.28.1

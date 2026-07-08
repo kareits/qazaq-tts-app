@@ -74,6 +74,19 @@ startup (lifespan). If the checkpoints are missing, the app still starts but
   progress events per sentence plus the final result.
 - `GET /api/audio/{filename}` — serve a ready mp3 (attachment).
 
+## Rate limiting & monitoring
+
+- **Rate limiting** (slowapi, per client IP): `/api/tts` and `/api/tts/stream` are
+  limited by `TTS_RATE_LIMIT` (default `10/minute`) to protect the CPU; a generous
+  `DEFAULT_RATE_LIMIT` (default `240/minute`) covers the rest. Excess → `429`.
+  Behind a proxy the real client IP comes from `X-Forwarded-For`, so uvicorn must
+  run with `--forwarded-allow-ips=*` (set in the Dockerfile; safe because the
+  backend is only reachable via the proxy). Set `RATE_LIMIT_ENABLED=0` to disable.
+- **Metrics**: Prometheus exposition at `/metrics` (`METRICS_ENABLED`, default on).
+  Not proxied by Caddy under `/api`, so it is internal-only — scrape it from the
+  internal network.
+- **Health**: the Docker image has a `HEALTHCHECK` hitting `/api/health`.
+
 ## System dependencies
 
 - **ffmpeg** must be installed and on PATH — checked at startup (lifespan), used

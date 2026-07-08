@@ -104,9 +104,14 @@ Locally it opens on `http://localhost`. For production set the domain in `.env`
 
 Configuration via backend environment variables: `CORS_ORIGINS` (empty for a
 single domain), `MAX_TEXT_LENGTH`, `CACHE_MAX_BYTES`, `DEFAULT_VOICE`,
-`MODELS_DIR`, `STORAGE_DIR`, `TTS_DEVICE`. Frontend: `VITE_BACKEND_URL` (empty →
-relative paths). The full plan (VPS provisioning, rate limiting, scaling, mobile
-app) — in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+`MODELS_DIR`, `STORAGE_DIR`, `TTS_DEVICE`, `TTS_RATE_LIMIT` (default `10/minute`),
+`DEFAULT_RATE_LIMIT` (default `240/minute`), `RATE_LIMIT_ENABLED`,
+`METRICS_ENABLED`. Frontend: `VITE_BACKEND_URL` (empty → relative paths).
+
+The backend rate-limits the CPU-expensive `/api/tts` endpoints per client IP
+(slowapi) and exposes Prometheus metrics at `/metrics` (internal only — not
+proxied by Caddy). The full plan (VPS provisioning, scaling, mobile app) — in
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Architecture (key rules)
 

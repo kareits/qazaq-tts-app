@@ -1,13 +1,18 @@
-"""FastAPI entry point: application, lifespan, CORS."""
+"""FastAPI entry point: application, lifespan, CORS, rate limiting, metrics."""
 
 import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from starlette.responses import JSONResponse
 
 from app.api.routes import router
-from app.config import CORS_ORIGINS
+from app.config import CORS_ORIGINS, METRICS_ENABLED
+from app.rate_limit import limiter
 from app.services import tts_service
 from app.services.audio_service import is_ffmpeg_available
 
@@ -45,5 +50,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting (per client IP) to protect the CPU from abuse. The global default
+# limit is applied by the middleware; per-endpoint limits are on the routes.
+app.state.limiter = limiter
+
+
+def _rate_limit_handler(request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(status_code=429, content={"detail": "Слишком много запросов, попробуйте позже."})
+
+
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+# Prometheus metrics at /metrics (internal — not proxied by Caddy under /api).
+if METRICS_ENABLED:
+    Instrumentator().instrument(app).expose(app, include_in_schema=False)
 
 app.include_router(router)

@@ -30,4 +30,11 @@ ENV MODELS_DIR=/models \
     PYTHONUTF8=1
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Container-level monitoring: mark unhealthy if /api/health stops responding.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4).status==200 else 1)"
+
+# --forwarded-allow-ips=* trusts the reverse proxy's X-Forwarded-For so the rate
+# limiter sees the real client IP (safe: the backend is only reachable via Caddy).
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--forwarded-allow-ips", "*"]
