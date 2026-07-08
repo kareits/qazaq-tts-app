@@ -122,8 +122,12 @@ through the stages upon confirmation.
 
 ### A6. Observability and CI/CD
 - Monitoring via `/api/health`; optional metrics (Prometheus), errors (Sentry).
-- **GitHub Actions**: lint/tests → build images → push to registry → deploy
-  (`compose pull && up -d`) or to a PaaS.
+- **GitHub Actions** (implemented):
+  - `.github/workflows/ci.yml` — on every push/PR to main: backend tests (pytest)
+    and frontend lint (oxlint) + build (tsc + vite).
+  - `.github/workflows/docker-publish.yml` — CD: builds and pushes the backend and
+    web images to GHCR (ghcr.io) on release tags `v*` or manual dispatch (with GHA
+    layer caching). Deployment on the server is then `docker compose pull && up -d`.
 
 ### Part A — stages
 - ✅ **A-1. Docker artifacts** (built and verified end-to-end): `backend/Dockerfile`
@@ -142,7 +146,10 @@ through the stages upon confirmation.
   (defaults = local development). Frontend — `VITE_BACKEND_URL` (empty → relative
   paths). Runtime check: local dev works without regressions.
 - ▶️ A-3. VPS + domain + `docker compose up` + HTTPS; e2e check (needs a server).
-- A-4. Rate limiting, a persistent cache volume, monitoring, CI/CD.
+- ✅ **CI/CD** (GitHub Actions): `ci.yml` (backend pytest + frontend lint/build on
+  push/PR) and `docker-publish.yml` (build & push images to GHCR on `v*` tags /
+  manual dispatch). Verified locally: pytest 17 passed, frontend lint & build pass.
+- A-4. Rate limiting, a persistent cache volume, monitoring.
 - A-5. (as load grows) a Celery/RQ + Redis queue.
 
 ---
