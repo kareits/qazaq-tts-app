@@ -1,7 +1,7 @@
-# Kazakh TTS App
+# iSoyle (Kazakh TTS App)
 
 Local web application for synthesizing speech from Kazakh text (Cyrillic).
-Runs fully locally, without cloud APIs, on CPU.
+Runs fully locally, without cloud APIs, on CPU. Product name: **iSoyle**.
 
 ## Stack
 

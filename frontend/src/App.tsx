@@ -21,6 +21,7 @@ import { PlayerControls } from './components/PlayerControls'
 import { DownloadButton } from './components/DownloadButton'
 import { Ornament, SunMark } from './components/Ornament'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
+import { Footer } from './components/Footer'
 import { useI18n } from './i18n/I18nContext'
 
 function App() {
@@ -206,7 +207,7 @@ function App() {
           <div className="brand">
             <SunMark size={34} />
             <div>
-              <h1>Kazakh TTS</h1>
+              <h1>iSoyle</h1>
               <p className="subtitle">{t('appSubtitle')}</p>
             </div>
           </div>
@@ -317,6 +318,8 @@ function App() {
           />
         </>
       )}
+
+      <Footer />
     </main>
   )
 }

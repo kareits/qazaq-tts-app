@@ -13,8 +13,8 @@ interface Props {
 }
 
 // Playback speed bounds.
-const SPEED_MIN = 0.1
-const SPEED_MAX = 3.0
+const SPEED_MIN = 0.5
+const SPEED_MAX = 2.0
 const SPEED_STEP = 0.1
 
 function formatTime(sec: number): string {

@@ -1,4 +1,4 @@
-# Kazakh TTS App — development plan (current version)
+# iSoyle (Kazakh TTS App) — development plan (current version)
 
 ## Context
 
@@ -109,7 +109,7 @@ Not implemented. KazakhTTS2 is the only engine.
 4. ✅ Look and feel: the dark "Keshki dala" theme (flag palette — blue #00AFCA +
    gold #FEC50C), the oyu-ornek ornament (a subtle accent), a sun mark, a gold glow
    of the current sentence. Russian interface.
-5. ✅ Playback speed slider (0.1–3.0, step 0.1, default 1.0) driving
+5. ✅ Playback speed slider (0.5–2.0, step 0.1, default 1.0) driving
    `audio.playbackRate`.
 
 Streaming synthesis: `tts_service.synthesize_stream` (an async event generator),

@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
     logger.info("Backend shutting down")
 
 
-app = FastAPI(title="Kazakh TTS App", lifespan=lifespan)
+app = FastAPI(title="iSoyle — Kazakh TTS", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

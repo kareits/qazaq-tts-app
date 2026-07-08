@@ -32,6 +32,12 @@ export const translations = {
     sentenceTitle: 'Предложение {n}',
     warningNotKazakh:
       'Текст не похож на казахскую кириллицу — KazakhTTS2 работает только с казахским текстом на кириллице.',
+    footerCreditsLicenses: 'Авторы и лицензии',
+    creditsP1: 'iSoyle — независимый проект, разработанный {dev}.',
+    creditsBuiltWith:
+      'Собрано на ESPnet2, ParallelWaveGAN, FastAPI и React. Эти компоненты используются по их open-source лицензиям.',
+    creditsDisclaimer:
+      'iSoyle не аффилирован с ISSAI или Nazarbayev University и не одобрен ими.',
   },
   kk: {
     appSubtitle: 'Қазақ мәтінін дыбысқа айналдыру',
@@ -63,6 +69,12 @@ export const translations = {
     sentenceTitle: '{n}-сөйлем',
     warningNotKazakh:
       'Мәтін қазақ кириллицасына ұқсамайды — KazakhTTS2 тек қазақ кириллица мәтінімен жұмыс істейді.',
+    footerCreditsLicenses: 'Авторлар мен лицензиялар',
+    creditsP1: 'iSoyle — {dev} әзірлеген тәуелсіз жоба.',
+    creditsBuiltWith:
+      'ESPnet2, ParallelWaveGAN, FastAPI және React негізінде жасалған. Бұл компоненттер өз open-source лицензиялары бойынша қолданылады.',
+    creditsDisclaimer:
+      'iSoyle ISSAI немесе Nazarbayev University-мен байланысты емес және олармен мақұлданбаған.',
   },
   en: {
     appSubtitle: 'Kazakh text-to-speech',
@@ -94,6 +106,12 @@ export const translations = {
     sentenceTitle: 'Sentence {n}',
     warningNotKazakh:
       "The text doesn't look like Kazakh Cyrillic — KazakhTTS2 works only with Kazakh Cyrillic text.",
+    footerCreditsLicenses: 'Credits & Licenses',
+    creditsP1: 'iSoyle is an independent project developed by {dev}.',
+    creditsBuiltWith:
+      'Built with ESPnet2, ParallelWaveGAN, FastAPI and React. These components are used under their respective open-source licenses.',
+    creditsDisclaimer:
+      'iSoyle is not affiliated with or endorsed by ISSAI or Nazarbayev University.',
   },
 } as const
 

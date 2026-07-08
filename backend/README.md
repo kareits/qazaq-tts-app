@@ -1,4 +1,4 @@
-# Kazakh TTS Backend
+# iSoyle — Backend
 
 Backend for synthesizing Kazakh speech on CPU. The engine is **KazakhTTS2**
 (ESPnet2 Tacotron2 + ParallelWaveGAN vocoder), CPU inference.
