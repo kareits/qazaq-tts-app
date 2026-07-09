@@ -35,6 +35,12 @@ services:
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
+    volumes:
+      # Persist Caddy's TLS certificates and state across container recreates,
+      # otherwise Caddy re-requests certs from Let's Encrypt every time and can
+      # hit the rate limit (certs live in /data/caddy in the official image).
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       backend:
         condition: service_healthy
@@ -43,3 +49,5 @@ services:
 volumes:
   models:
   storage:
+  caddy_data:
+  caddy_config:

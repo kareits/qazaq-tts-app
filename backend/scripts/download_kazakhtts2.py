@@ -15,6 +15,7 @@ installing requirements.
 """
 
 import argparse
+import os
 import shutil
 import sys
 import tempfile
@@ -26,8 +27,14 @@ BASE_URL = "https://issai.nu.edu.kz/wp-content/uploads/2022/03"
 
 VOICES = ["female1", "female2", "female3", "male1", "male2"]
 
-# Models root: backend/models/kazakhtts2 (the script lives in backend/scripts).
-MODELS_ROOT = Path(__file__).resolve().parent.parent / "models" / "kazakhtts2"
+# Models root: MODELS_DIR/kazakhtts2 when set (Docker mounts the models volume at
+# MODELS_DIR, e.g. /models), otherwise backend/models/kazakhtts2 (the script lives
+# in backend/scripts). Honoring MODELS_DIR keeps downloads in the same location the
+# backend reads from, so `docker compose run ... download_kazakhtts2.py` populates
+# the mounted volume rather than the ephemeral container filesystem.
+_MODELS_DIR = os.environ.get("MODELS_DIR")
+_MODELS_BASE = Path(_MODELS_DIR) if _MODELS_DIR else Path(__file__).resolve().parent.parent / "models"
+MODELS_ROOT = _MODELS_BASE / "kazakhtts2"
 
 
 def _tts_url(voice: str) -> str:
