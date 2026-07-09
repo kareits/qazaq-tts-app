@@ -2,14 +2,13 @@ import { useI18n } from '../i18n/I18nContext'
 import type { Lang } from '../i18n/translations'
 
 // A single "Credits & Licenses" footer item whose popover shows on hover or
-// keyboard focus. Only three tokens are links: the model (KazakhTTS2), its
-// CC-BY-4.0 license, and the paper (LREC 2022). The block credits the most
-// sensitive component (the KazakhTTS2 model, ISSAI) and states non-affiliation.
+// keyboard focus. Only two tokens are links: the model (KazakhTTS2) and its
+// CC-BY-4.0 license. The block credits the most sensitive component (the
+// KazakhTTS2 model, ISSAI) — naming its authors, not a citation — and states
+// non-affiliation. CC-BY attribution is satisfied by the model name + repo link,
+// the authors, and the license link; the paper citation is not required.
 const KAZAKHTTS2_REPO = 'https://github.com/IS2AI/Kazakh_TTS'
-const KAZAKHTTS2_PAPER = 'https://arxiv.org/abs/2201.05771'
 const CC_BY_URL = 'https://creativecommons.org/licenses/by/4.0/'
-const PAPER_TITLE =
-  'KazakhTTS2: Extending the Open-Source Kazakh TTS Corpus With More Data, Speakers, and Topics'
 const DEVELOPER = 'kareits'
 
 function Ext({ href, children }: { href: string; children: string }) {
@@ -47,10 +46,10 @@ function ModelSentence({ lang }: { lang: Lang }) {
   )
 }
 
-function citeLabel(lang: Lang): string {
-  if (lang === 'ru') return 'Цитирование'
-  if (lang === 'kk') return 'Дереккөз'
-  return 'Please cite'
+function authorsLabel(lang: Lang): string {
+  if (lang === 'ru') return 'Авторы модели'
+  if (lang === 'kk') return 'Модель авторлары'
+  return 'Model authors'
 }
 
 export function Footer() {
@@ -66,8 +65,7 @@ export function Footer() {
           <p>{t('creditsP1', { dev: DEVELOPER })}</p>
           <ModelSentence lang={lang} />
           <p className="popover-cite">
-            {citeLabel(lang)}: Mussakhojayeva, Khassanov &amp; Varol, “
-            {PAPER_TITLE}”, <Ext href={KAZAKHTTS2_PAPER}>LREC 2022</Ext>.
+            {authorsLabel(lang)}: Mussakhojayeva, Khassanov &amp; Varol (ISSAI).
           </p>
           <p>{t('creditsBuiltWith')}</p>
           <p className="popover-muted">{t('creditsDisclaimer')}</p>
