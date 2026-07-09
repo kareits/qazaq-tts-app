@@ -124,8 +124,14 @@ end-to-end по HTTPS. Осталось: юридические документ
       (UptimeRobot/Better Uptime) — **требует твоего аккаунта** (инструкция ниже).
 - [ ] (опц.) **Prometheus + Grafana** на сервере, скрейп `backend:8000/metrics`
       (метрики внутренние, наружу не торчат).
-- [ ] **CD**: по тегу `v*` GHCR получает образы → на сервере `docker compose pull && up -d`
-      (вручную или мини-webhook). Могу настроить деплой-скрипт.
+- [x] **CD-скрипт** `scripts/deploy.sh` — одна команда на сервере:
+      `cd /opt/isoyle && ./scripts/deploy.sh` (или с dev-машины
+      `ssh isoyle 'cd /opt/isoyle && ./scripts/deploy.sh'`). Делает `git pull`
+      (с ре-exec самого скрипта), пересборку, `up -d`, ожидание healthcheck и
+      smoke-тест `/api/health`; при провале — логи + команда отката.
+- [ ] (опц.) **CD через GHCR**: по тегу `v*` собираются образы →
+      `docker compose pull && up -d` (быстрее, чем сборка на сервере). При росте
+      нагрузки можно перейти на этот вариант.
 
 ### Настройка UptimeRobot (5 минут, бесплатный тариф)
 1. Регистрация на uptimerobot.com.
