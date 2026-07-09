@@ -148,5 +148,7 @@ proxied by Caddy). The full plan (VPS provisioning, scaling, mobile app) — in
 
 - [docs/PLAN.md](docs/PLAN.md) — development plan and stage statuses
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — server deployment and mobile app plan
+- [docs/LAUNCH.md](docs/LAUNCH.md) — production launch checklist (live on isoyle.kz)
+- [docs/MOBILE.md](docs/MOBILE.md) — Android app plan (Capacitor, AdMob, Google Play)
 - [backend/README.md](backend/README.md) — backend details
 - `Kazakh_TTS_App_Specification.md` — original specification (in Russian)
