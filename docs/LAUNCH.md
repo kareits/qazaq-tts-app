@@ -23,8 +23,8 @@ end-to-end по HTTPS. Осталось: юридические документ
 - ✅ Деплой (сборка на сервере, 3 голоса female3/male1/male2, `docker compose up`)
       — Фаза 5.
 - ✅ HTTPS: сертификат на `isoyle.kz` + `www.isoyle.kz`, синтез по HTTPS ok — Фаза 6.
-- ✅ Эксплуатация: лог-ротация, rate-limit проверен на проде, restart-политика — Фаза 7
-      (осталось: uptime-мониторинг — нужен твой аккаунт UptimeRobot).
+- ✅ Эксплуатация: лог-ротация, rate-limit, restart-политика, CD-скрипт,
+      uptime-мониторинг (UptimeRobot) — Фаза 7.
 - ⏳ Юридическое (privacy/ToS/ISSAI/товарный знак) — Фаза 8.
 
 ---
@@ -120,8 +120,9 @@ end-to-end по HTTPS. Осталось: юридические документ
       восстановления `isoyle` — в менеджере паролей.)
 - [ ] **Rate-limit** под реальную нагрузку — при необходимости поднять
       `TTS_RATE_LIMIT` в `.env` (сейчас `10/minute`, проверено — работает).
-- [ ] **Uptime-мониторинг**: внешний пинг `https://isoyle.kz/api/health`
-      (UptimeRobot/Better Uptime) — **требует твоего аккаунта** (инструкция ниже).
+- [x] **Uptime-мониторинг**: UptimeRobot, keyword-монитор на
+      `https://isoyle.kz/api/health` — инцидент, когда пропадает `"model_loaded":true`
+      (ловит и падение сервера, и отвал модели), интервал 5 мин, алерт на email.
 - [ ] (опц.) **Prometheus + Grafana** на сервере, скрейп `backend:8000/metrics`
       (метрики внутренние, наружу не торчат).
 - [x] **CD-скрипт** `scripts/deploy.sh` — одна команда на сервере:
