@@ -68,6 +68,13 @@ def _digit_by_digit(digits: str) -> str:
     return " ".join("нөл" if d == "0" else _ONES[int(d)] for d in digits)
 
 
+def digits_kk(text: str) -> str:
+    """Read every digit in the string one by one (for phone numbers, codes)."""
+    return " ".join(
+        "нөл" if ch == "0" else _ONES[int(ch)] for ch in text if ch.isdigit()
+    )
+
+
 def cardinal_kk(n: int) -> str:
     """Cardinal numeral for an integer, e.g. 2024 -> 'екі мың жиырма төрт'."""
     if n < 0:

@@ -114,3 +114,8 @@ def test_ordinal(value, expected):
 )
 def test_attach_case(words, case, expected):
     assert n.attach_case(words, case) == expected
+
+
+def test_digits_kk():
+    assert n.digits_kk("2024") == "екі нөл екі төрт"
+    assert n.digits_kk("+7 701") == "жеті жеті нөл бір"  # non-digits ignored
