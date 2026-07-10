@@ -97,12 +97,26 @@ def _append_sentence(result: list[dict], text: str, raw_start: int, raw_end: int
 # A number token: optional sign, an integer (plain or space-grouped "1 000 000"),
 # an optional decimal (comma or dot — comma is primary in Kazakh), an optional
 # hyphen suffix ("5-ші" ordinal, "10-ға" case, "5-сынып" word), an optional unit
-# (% or ₸) and an optional post-unit case suffix ("₸-ден"). Dates, time, phones,
-# №, and ranges are handled by dedicated passes that run before this one.
+# ("5%", "5 кг", "12 км", "-7°C") and an optional post-unit case suffix
+# ("₸-ден"). Dates, time, phones, №, and ranges are handled by dedicated passes
+# that run before this one.
 _CYR = "а-яёәғқңөұүһі"
+
+# Unit abbreviation -> spoken word. Multi-char abbreviations are matched before
+# single-letter ones; a trailing (?![_CYR]) guards single letters (so "м" in
+# "5 мамыр"/"минут" is NOT read as "метр"). "°"/"°C" -> "градус".
+_UNIT_WORDS = {
+    "км": "километр", "см": "сантиметр", "мм": "миллиметр", "мг": "миллиграмм",
+    "мл": "миллилитр", "кг": "килограмм", "га": "гектар",
+    "м": "метр", "г": "грамм", "т": "тонна", "л": "литр",
+    "%": "пайыз", "₸": "теңге",
+}
+_UNIT_ALT = r"км|см|мм|мг|мл|кг|га|м|г|т|л|°[CcСс]?|%|₸"
 _NUMBER_RE = re.compile(
     r"(?<!\w)(-)?(\d{1,3}(?:[\s ]\d{3})+|\d+)([.,]\d+)?"
-    r"(?:-([" + _CYR + r"]+))?(\s?[%₸])?(?:-([" + _CYR + r"]+))?",
+    r"(?:-([" + _CYR + r"]+))?"
+    r"(?:\s?(" + _UNIT_ALT + r")(?![" + _CYR + r"]))?"
+    r"(?:-([" + _CYR + r"]+))?",
     re.IGNORECASE,
 )
 
@@ -161,12 +175,14 @@ def _with_sign(reading: str, sign: str | None) -> str:
 
 
 def _apply_unit(reading: str, unit_raw: str | None) -> str:
-    if unit_raw:
-        symbol = unit_raw.strip()[-1]
-        if symbol == "%":
-            reading += " пайыз"
-        elif symbol == "₸":
-            reading += " теңге"
+    if not unit_raw:
+        return reading
+    unit = unit_raw.strip()
+    word = _UNIT_WORDS.get(unit)
+    if word is None and unit.startswith("°"):
+        word = "градус"
+    if word:
+        reading += " " + word
     return reading
 
 
