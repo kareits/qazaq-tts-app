@@ -121,10 +121,14 @@ def ordinal_kk(n: int) -> str:
 # to be validated by a native speaker (D4).
 _BACK_VOWELS = "аоұы"
 _FRONT_VOWELS = "әөүеі"
-# Final-sound classes for choosing the allomorph.
-_VOWEL_ENDINGS = "аәоөұүыіеиуёэюя"
+# Final-sound classes for choosing the allomorph. Note: final "у" is a
+# semivowel/sonorant, not a plain vowel — "елу" takes consonant-type endings in
+# the accusative/genitive ("елуді", "елудің"), so it is NOT in _VOWEL_ENDINGS.
+_VOWEL_ENDINGS = "аәоөұүыіеиёэюя"
 _VOICELESS = "кқпстфхшцчщ"
-_NASALS = "мнң"
+_NASALS = "мнң"           # sonorant nasals
+_SONORANTS = "лруйw"      # sonorants л р у й (and semivowel у)
+# everything else that is a consonant is a voiced obstruent (б в г ғ д ж з)
 
 # (back, front) allomorph pairs by final-sound class; "_" is the default.
 _CASE_ENDINGS = {
@@ -137,8 +141,9 @@ _CASE_ENDINGS = {
     "genitive": {"voiceless": ("тың", "тің"), "vowel": ("ның", "нің"),
                  "nasal": ("ның", "нің"), "_": ("дың", "дің")},
 }
-# Instrumental does not harmonize front/back (always -ен).
-_INSTRUMENTAL = {"voiceless": "пен", "nasal": "бен", "_": "мен"}
+# Instrumental (does not harmonize front/back): after voiceless -> -пен, after a
+# voiced obstruent (б в г ғ д ж з) -> -бен, after vowels/sonorants/nasals -> -мен.
+_INSTRUMENTAL = {"voiceless": "пен", "voiced": "бен", "_": "мен"}
 
 
 def _is_front(word: str) -> bool:
@@ -159,7 +164,15 @@ def _final_class(word: str) -> str:
         return "voiceless"
     if last in _NASALS:
         return "nasal"
+    if last in _SONORANTS:
+        return "sonorant"
     return "voiced"
+
+
+def postposition_kk(word: str) -> str:
+    """The бен/мен/пен postposition ('and'/'with') for a word — same allomorph
+    rule as the instrumental case. Used to join range parts ("X мен Y")."""
+    return _INSTRUMENTAL.get(_final_class(word), _INSTRUMENTAL["_"])
 
 
 def attach_case(words: str, case: str) -> str:

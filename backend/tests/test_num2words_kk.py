@@ -116,6 +116,35 @@ def test_attach_case(words, case, expected):
     assert n.attach_case(words, case) == expected
 
 
+@pytest.mark.parametrize(
+    "words,case,expected",
+    [
+        # Instrumental -мен/-бен/-пен (D4 review): sonorants/nasals -> -мен,
+        # voiced obstruents -> -бен, voiceless -> -пен.
+        ("он", "instrumental", "онмен"),
+        ("жүз", "instrumental", "жүзбен"),
+        ("мың", "instrumental", "мыңмен"),
+        ("бес", "instrumental", "беспен"),
+        ("бір", "instrumental", "бірмен"),
+        # "елу" ends in the semivowel "у" -> consonant-type endings for
+        # accusative/genitive, soft endings elsewhere.
+        ("елу", "accusative", "елуді"),
+        ("елу", "genitive", "елудің"),
+        ("елу", "dative", "елуге"),
+        ("елу", "locative", "елуде"),
+        ("елу", "ablative", "елуден"),
+        ("елу", "instrumental", "елумен"),
+        # Controls: true vowel-ending stems keep -ны/-ні, -ның/-нің.
+        ("жеті", "accusative", "жетіні"),
+        ("жеті", "genitive", "жетінің"),
+        ("жиырма", "accusative", "жиырманы"),
+        ("жиырма", "genitive", "жиырманың"),
+    ],
+)
+def test_attach_case_morphology_review(words, case, expected):
+    assert n.attach_case(words, case) == expected
+
+
 def test_digits_kk():
     assert n.digits_kk("2024") == "екі нөл екі төрт"
     assert n.digits_kk("+7 701") == "жеті жеті нөл бір"  # non-digits ignored
