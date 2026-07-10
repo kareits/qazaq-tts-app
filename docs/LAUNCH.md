@@ -65,10 +65,20 @@ end-to-end по HTTPS. Осталось: юридические документ
 - [x] Пользователь `isoyle` с `sudo` (+ группа `docker`, NOPASSWD sudo, вход по
       ключу). Восстановление — через VNC-консоль провайдера.
 - [x] sshd: `PermitRootLogin no`, `PasswordAuthentication no`,
-      `KbdInteractiveAuthentication no` (drop-in `99-hardening.conf`, только ключ).
+      `KbdInteractiveAuthentication no` — только ключ (проверено: root/пароль сразу
+      отклоняются `Permission denied (publickey)`).
+      ⚠️ **Подводный камень**: Ubuntu держит `/etc/ssh/sshd_config.d/50-cloud-init.conf`
+      с `PasswordAuthentication yes`, а sshd берёт **первое** значение по алфавиту,
+      поэтому `99-hardening.conf` (`no`) молча перебивался и пароль оставался
+      включён. Исправлено: `no` выставлено во **всех** источниках (основной
+      `sshd_config`, `50-cloud-init.conf`, `99-hardening.conf`). Проверять эффективное
+      значение: `sudo sshd -T | grep -i passwordauthentication`.
 - [x] Firewall `ufw`: разрешены `22`, `80`, `443`; остальное deny.
 - [x] `unattended-upgrades` (автообновления безопасности) + `fail2ban`
-      (jail sshd: 5 попыток → бан 1 ч).
+      (jail sshd: 5 попыток → бан 1 ч). ⚠️ Домашний IP админа занесён в `ignoreip`
+      (jail.local), иначе случайная попытка входа под root (он отключён) быстро
+      приводит к самоблокировке. Если всё же забанило — зайти с другого IP
+      (мобильный хотспот/VPN) → `fail2ban-client set sshd unbanip <ip>`, либо VNC.
 - [x] hostname `srv.isoyle.kz`.
 
 ## Фаза 4. Docker ✅
