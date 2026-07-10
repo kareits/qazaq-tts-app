@@ -158,8 +158,10 @@ async def synthesize_stream(
             )
             for i, sent in enumerate(selected):
                 seg_wav = TMP_DIR / f"{uuid.uuid4().hex}.wav"
-                # Collapse inner whitespace for synthesis; offsets untouched.
+                # Collapse inner whitespace, then expand digit numbers into Kazakh
+                # words for the model. Offsets/highlighting keep the original text.
                 seg_text = text_normalizer.normalize_text(sent["text"])
+                seg_text = text_normalizer.expand_numbers_kk(seg_text)
                 await asyncio.to_thread(
                     _engine.synthesize, seg_text, voice, str(seg_wav)
                 )
