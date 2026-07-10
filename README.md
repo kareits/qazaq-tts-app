@@ -150,5 +150,6 @@ proxied by Caddy). The full plan (VPS provisioning, scaling, mobile app) — in
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — server deployment and mobile app plan
 - [docs/LAUNCH.md](docs/LAUNCH.md) — production launch checklist (live on isoyle.kz)
 - [docs/MOBILE.md](docs/MOBILE.md) — Android app plan (Capacitor, AdMob, Google Play)
+- [docs/NUMBERS.md](docs/NUMBERS.md) — staged plan for Kazakh number/date normalization
 - [backend/README.md](backend/README.md) — backend details
 - `Kazakh_TTS_App_Specification.md` — original specification (in Russian)
