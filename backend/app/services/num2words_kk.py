@@ -80,6 +80,100 @@ def cardinal_kk(n: int) -> str:
     return " ".join(_positive_int_words(n))
 
 
+# --- Ordinals (NUMBERS.md stage 2) ----------------------------------------
+#
+# Only the LAST word of a compound cardinal takes the ordinal suffix, and that
+# last word is always one of these base words, so a lookup table (which also
+# encodes the irregular stems қырық→қырқыншы, жиырма→жиырмасыншы) is enough.
+_ORDINAL = {
+    "нөл": "нөлінші",
+    "бір": "бірінші", "екі": "екінші", "үш": "үшінші", "төрт": "төртінші",
+    "бес": "бесінші", "алты": "алтыншы", "жеті": "жетінші", "сегіз": "сегізінші",
+    "тоғыз": "тоғызыншы",
+    "он": "оныншы", "жиырма": "жиырмасыншы", "отыз": "отызыншы",
+    "қырық": "қырқыншы", "елу": "елуінші", "алпыс": "алпысыншы",
+    "жетпіс": "жетпісінші", "сексен": "сексенінші", "тоқсан": "тоқсаныншы",
+    "жүз": "жүзінші", "мың": "мыңыншы", "миллион": "миллионыншы",
+    "миллиард": "миллиардыншы", "триллион": "триллионыншы",
+}
+
+
+def ordinal_kk(n: int) -> str:
+    """Ordinal numeral: 2 -> 'екінші', 21 -> 'жиырма бірінші', 100 -> 'жүзінші'."""
+    if n < 0:
+        return "минус " + ordinal_kk(-n)
+    words = cardinal_kk(n).split()
+    words[-1] = _ORDINAL.get(words[-1], words[-1] + "ыншы")
+    return " ".join(words)
+
+
+# --- Case suffixes (NUMBERS.md stage 2) ------------------------------------
+#
+# Attach a grammatical case ending to the last word of a spelled number, with
+# vowel harmony (front/back) and consonant assimilation. Rough working tables —
+# to be validated by a native speaker (D4).
+_BACK_VOWELS = "аоұы"
+_FRONT_VOWELS = "әөүеі"
+# Final-sound classes for choosing the allomorph.
+_VOWEL_ENDINGS = "аәоөұүыіеиуёэюя"
+_VOICELESS = "кқпстфхшцчщ"
+_NASALS = "мнң"
+
+# (back, front) allomorph pairs by final-sound class; "_" is the default.
+_CASE_ENDINGS = {
+    "dative": {"voiceless": ("қа", "ке"), "_": ("ға", "ге")},
+    "locative": {"voiceless": ("та", "те"), "_": ("да", "де")},
+    "ablative": {"voiceless": ("тан", "тен"), "nasal": ("нан", "нен"),
+                 "_": ("дан", "ден")},
+    "accusative": {"vowel": ("ны", "ні"), "voiceless": ("ты", "ті"),
+                   "_": ("ды", "ді")},
+    "genitive": {"voiceless": ("тың", "тің"), "vowel": ("ның", "нің"),
+                 "nasal": ("ның", "нің"), "_": ("дың", "дің")},
+}
+# Instrumental does not harmonize front/back (always -ен).
+_INSTRUMENTAL = {"voiceless": "пен", "nasal": "бен", "_": "мен"}
+
+
+def _is_front(word: str) -> bool:
+    """Vowel harmony: True if the last full front/back vowel is front."""
+    for ch in reversed(word):
+        if ch in _BACK_VOWELS:
+            return False
+        if ch in _FRONT_VOWELS:
+            return True
+    return False
+
+
+def _final_class(word: str) -> str:
+    last = word[-1].lower()
+    if last in _VOWEL_ENDINGS:
+        return "vowel"
+    if last in _VOICELESS:
+        return "voiceless"
+    if last in _NASALS:
+        return "nasal"
+    return "voiced"
+
+
+def attach_case(words: str, case: str) -> str:
+    """Attach a case ending to the last word of a spelled number.
+
+    e.g. attach_case('он', 'dative') -> 'онға'; attach_case('жүз', 'dative') ->
+    'жүзге' (allomorph re-derived from the spelled word, not the digit).
+    """
+    parts = words.split()
+    last = parts[-1]
+    cls = _final_class(last)
+    if case == "instrumental":
+        suffix = _INSTRUMENTAL.get(cls, _INSTRUMENTAL["_"])
+    else:
+        table = _CASE_ENDINGS[case]
+        pair = table.get(cls, table["_"])
+        suffix = pair[1] if _is_front(last) else pair[0]
+    parts[-1] = last + suffix
+    return " ".join(parts)
+
+
 def decimal_kk(int_part: int, frac_digits: str) -> str:
     """Read a decimal: (3, '14') -> 'үш бүтін жүзден он төрт'.
 

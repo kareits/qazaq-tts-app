@@ -1,5 +1,5 @@
 """Tests for number expansion in text and the decimal-aware sentence splitter
-(NUMBERS.md stage 1)."""
+(NUMBERS.md stages 1-2)."""
 
 import pytest
 
@@ -9,37 +9,40 @@ from app.services import text_normalizer as tn
 @pytest.mark.parametrize(
     "text,expected",
     [
-        # Cardinals inside a sentence.
+        # --- Stage 1: cardinals, decimals, percent, tenge ---
         ("Бізде 1250 кітап бар", "Бізде мың екі жүз елу кітап бар"),
-        ("2024 жылы", "екі мың жиырма төрт жылы"),
-        # Percent and tenge.
         ("5% жеңілдік", "бес пайыз жеңілдік"),
         ("1000 ₸", "мың теңге"),
-        # Decimals: comma (primary) and dot.
         ("Баға 3,14", "Баға үш бүтін жүзден он төрт"),
         ("Баға 3.14", "Баға үш бүтін жүзден он төрт"),
-        # Grouped thousands.
         ("1 000 000 адам", "бір миллион адам"),
-        # Negative.
         ("-5 градус", "минус бес градус"),
-        # No digits — unchanged.
         ("Сәлем әлем", "Сәлем әлем"),
+        # --- Stage 2: ordinals (explicit marker) ---
+        ("5-ші орын", "бесінші орын"),
+        ("2-ші", "екінші"),
+        ("21-ші", "жиырма бірінші"),
+        # --- Stage 2: case suffixes (allomorph re-derived from the word) ---
+        ("10-ға дейін", "онға дейін"),
+        ("100-ға", "жүзге"),
+        ("5-тен", "бестен"),
+        # --- Stage 2: hyphen + attributive word -> ordinal ---
+        ("5-сынып", "бесінші сынып"),
+        # --- Stage 2: context ordinal for a year / century ---
+        ("2015 жыл", "екі мың он бесінші жыл"),
+        ("2024 жылы", "екі мың жиырма төртінші жылы"),
+        ("21 ғасыр", "жиырма бірінші ғасыр"),
+        # ...but a duration stays cardinal.
+        ("2 жыл бойы", "екі жыл бойы"),
     ],
 )
 def test_expand(text, expected):
     assert tn.expand_numbers_kk(text) == expected
 
 
-@pytest.mark.parametrize(
-    "text",
-    [
-        "5-ші орын",       # ordinal marker -> stage 2
-        "10-ға дейін",     # case suffix -> stage 2
-        "05.05.2024 жыл",  # dotted date -> stage 3
-    ],
-)
-def test_expand_leaves_later_stages_untouched(text):
-    assert tn.expand_numbers_kk(text) == text
+def test_expand_leaves_dates_for_stage3():
+    # Dotted dates are still left untouched (stage 3).
+    assert tn.expand_numbers_kk("05.05.2024 жыл") == "05.05.2024 жыл"
 
 
 def test_decimal_not_a_sentence_break():

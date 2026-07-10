@@ -1,4 +1,4 @@
-"""Tests for the Kazakh number-to-words core (NUMBERS.md stage 1: cardinals)."""
+"""Tests for the Kazakh number-to-words core (NUMBERS.md stages 1-2)."""
 
 import pytest
 
@@ -65,3 +65,52 @@ def test_cardinal_leading_one_omitted_only_for_hundred_and_thousand():
 )
 def test_decimal(int_part, frac, expected):
     assert n.decimal_kk(int_part, frac) == expected
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (1, "бірінші"),
+        (2, "екінші"),
+        (3, "үшінші"),
+        (5, "бесінші"),
+        (6, "алтыншы"),
+        (7, "жетінші"),
+        (8, "сегізінші"),
+        (9, "тоғызыншы"),
+        (10, "оныншы"),
+        (11, "он бірінші"),
+        (20, "жиырмасыншы"),
+        (21, "жиырма бірінші"),
+        (30, "отызыншы"),
+        (40, "қырқыншы"),
+        (50, "елуінші"),
+        (100, "жүзінші"),
+        (1000, "мыңыншы"),
+        (2015, "екі мың он бесінші"),
+        (2024, "екі мың жиырма төртінші"),
+    ],
+)
+def test_ordinal(value, expected):
+    assert n.ordinal_kk(value) == expected
+
+
+@pytest.mark.parametrize(
+    "words,case,expected",
+    [
+        # Dative (-ға/-ге/-қа/-ке): allomorph from the spelled word's ending.
+        ("он", "dative", "онға"),
+        ("жүз", "dative", "жүзге"),
+        ("бес", "dative", "беске"),
+        ("жиырма бес", "dative", "жиырма беске"),
+        # Locative (-да/-де/-та/-те).
+        ("он", "locative", "онда"),
+        ("бес", "locative", "бесте"),
+        # Ablative (-дан/-ден/-тан/-тен/-нан/-нен).
+        ("он", "ablative", "оннан"),
+        ("бес", "ablative", "бестен"),
+        ("жүз", "ablative", "жүзден"),
+    ],
+)
+def test_attach_case(words, case, expected):
+    assert n.attach_case(words, case) == expected

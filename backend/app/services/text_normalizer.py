@@ -92,56 +92,109 @@ def _append_sentence(result: list[dict], text: str, raw_start: int, raw_end: int
     )
 
 
-# --- Number expansion (NUMBERS.md, stage 1: cardinals) ---------------------
+# --- Number expansion (NUMBERS.md, stages 1-2) -----------------------------
 #
 # A number token: optional sign, an integer (plain or space-grouped "1 000 000"),
-# an optional decimal part (comma or dot — comma is primary in Kazakh), and an
-# optional trailing unit symbol (% or ₸). Ordinals/case suffixes (e.g. "5-ші",
-# "10-ға") and dotted dates are intentionally left for later stages and skipped
-# in the replacement callback.
+# an optional decimal (comma or dot — comma is primary in Kazakh), an optional
+# hyphen suffix ("5-ші" ordinal, "10-ға" case, "5-сынып" attributive word) and an
+# optional unit (% or ₸). Dotted dates (05.05.2024) and ranges are left for stage
+# 3 and skipped in the callback.
 _NUMBER_RE = re.compile(
-    r"(?<!\w)(-)?(\d{1,3}(?:[\s ]\d{3})+|\d+)([.,]\d+)?(\s?[%₸])?"
+    r"(?<!\w)(-)?(\d{1,3}(?:[\s ]\d{3})+|\d+)([.,]\d+)?"
+    r"(?:-([а-яёәғқңөұүһі]+))?(\s?[%₸])?",
+    re.IGNORECASE,
 )
 
+# Explicit ordinal markers written after the hyphen ("5-ші" -> бесінші).
+_ORDINAL_MARKERS = {"ші", "шы", "ыншы", "інші", "нші", "ншы"}
 
-def _number_replacement(m: re.Match) -> str:
-    """Replace one number token with its Kazakh cardinal reading (or leave it
-    unchanged if it belongs to a later stage: dates, ordinals, case suffixes)."""
-    s = m.string
-    start, end = m.start(), m.end()
+# Written case allomorph -> case name. The number is spelled and the correct
+# allomorph is re-derived from the spelled word (so "100-ға" -> "жүзге").
+_WRITTEN_CASE = {
+    "ға": "dative", "ге": "dative", "қа": "dative", "ке": "dative",
+    "да": "locative", "де": "locative", "та": "locative", "те": "locative",
+    "дан": "ablative", "ден": "ablative", "тан": "ablative", "тен": "ablative",
+    "нан": "ablative", "нен": "ablative",
+    "ны": "accusative", "ні": "accusative", "ды": "accusative",
+    "ді": "accusative", "ты": "accusative", "ті": "accusative",
+    "ның": "genitive", "нің": "genitive", "дың": "genitive", "дің": "genitive",
+    "тың": "genitive", "тің": "genitive",
+    "мен": "instrumental", "бен": "instrumental", "пен": "instrumental",
+}
 
-    # Part of a longer dotted/comma digit chain (date/version like 05.05.2024) —
-    # leave the whole chain for the dates stage.
-    if start >= 2 and s[start - 1] in ".," and s[start - 2].isdigit():
-        return m.group(0)
-    tail = s[end : end + 2]
-    if tail[:1] in ".," and len(tail) >= 2 and tail[1].isdigit():
-        return m.group(0)
-    # Ordinal / case hyphen-suffix ("5-ші", "10-ға") — later stage.
-    if tail[:1] in "-–" and len(tail) >= 2 and tail[1].isalpha():
-        return m.group(0)
+# Following words that make a bare "N <word>" ordinal (D1): a 4-digit year, or a
+# century. Duration ("2 жыл") stays cardinal via the numeric range guards.
+_YEAR_WORDS = {"жыл", "жылы", "жылғы", "жылдың", "жылдан", "жылда"}
+_CENTURY_WORDS = {"ғасыр", "ғасырда", "ғасырдың", "ғасырға"}
+_NEXT_WORD_RE = re.compile(r"\s+([а-яёәғқңөұүһі]+)", re.IGNORECASE)
 
-    sign, int_raw, frac_raw, unit_raw = m.group(1), m.group(2), m.group(3), m.group(4)
-    int_val = int(re.sub(r"[\s ]", "", int_raw))
-    if frac_raw:
-        reading = num2words_kk.decimal_kk(int_val, frac_raw[1:])
-    else:
-        reading = num2words_kk.cardinal_kk(int_val)
-    if sign:
-        reading = "минус " + reading
+
+def _with_sign(reading: str, sign: str | None) -> str:
+    return "минус " + reading if sign else reading
+
+
+def _apply_unit(reading: str, unit_raw: str | None) -> str:
     if unit_raw:
         symbol = unit_raw.strip()[-1]
         if symbol == "%":
             reading += " пайыз"
-        elif symbol == "₸":  # ₸
+        elif symbol == "₸":
             reading += " теңге"
     return reading
 
 
+def _number_replacement(m: re.Match) -> str:
+    """Replace one number token with its Kazakh reading, or leave it unchanged if
+    it belongs to a later stage (dotted dates, ranges)."""
+    s = m.string
+    start, end = m.start(), m.end()
+    sign, int_raw, frac_raw, suffix, unit_raw = m.group(1, 2, 3, 4, 5)
+
+    # Part of a longer dotted/comma digit chain (date/version 05.05.2024) — stage 3.
+    if start >= 2 and s[start - 1] in ".," and s[start - 2].isdigit():
+        return m.group(0)
+    if not suffix:
+        tail = s[end : end + 2]
+        if tail[:1] in ".," and len(tail) >= 2 and tail[1].isdigit():
+            return m.group(0)
+
+    int_val = int(re.sub(r"[\s ]", "", int_raw))
+
+    # Decimal (units/suffix ignored — decimals do not take them).
+    if frac_raw:
+        reading = num2words_kk.decimal_kk(int_val, frac_raw[1:])
+        return _apply_unit(_with_sign(reading, sign), unit_raw)
+
+    # Hyphen suffix: ordinal marker, case allomorph, or an attributive word.
+    if suffix:
+        low = suffix.lower()
+        if low in _ORDINAL_MARKERS:
+            return _with_sign(num2words_kk.ordinal_kk(int_val), sign)
+        if low in _WRITTEN_CASE:
+            spelled = num2words_kk.cardinal_kk(int_val)
+            return _with_sign(
+                num2words_kk.attach_case(spelled, _WRITTEN_CASE[low]), sign
+            )
+        # "5-сынып" — the number modifies the noun as an ordinal.
+        return _with_sign(num2words_kk.ordinal_kk(int_val) + " " + suffix, sign)
+
+    # Context ordinal: "2015 жыл" (4-digit year) / "21 ғасыр" (century).
+    nxt = _NEXT_WORD_RE.match(s, end)
+    if nxt:
+        word = nxt.group(1).lower()
+        if (word in _YEAR_WORDS and 1000 <= int_val <= 2999) or (
+            word in _CENTURY_WORDS and 1 <= int_val <= 40
+        ):
+            return _with_sign(num2words_kk.ordinal_kk(int_val), sign)
+
+    return _apply_unit(_with_sign(num2words_kk.cardinal_kk(int_val), sign), unit_raw)
+
+
 def expand_numbers_kk(text: str) -> str:
-    """Expand digit numbers into Kazakh words for synthesis (stage 1: cardinals,
-    decimals, percent, tenge). Applied per segment right before the TTS model, so
-    the UI/highlighting keeps the original digits."""
+    """Expand digit numbers into Kazakh words for synthesis (stages 1-2:
+    cardinals, decimals, percent/tenge, ordinals, case suffixes, and year/century
+    context). Applied per segment right before the TTS model, so the UI keeps the
+    original digits."""
     return _NUMBER_RE.sub(_number_replacement, text)
 
 
